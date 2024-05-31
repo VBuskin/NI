@@ -59,7 +59,6 @@ NI_data |>
          conc_cv = NI_c_ratings[match(NI_data$lemma, NI_c_ratings$lemma),]$cv) -> NI_data_concreteness
 
 
-
 # Selectional strength ----------------------------------------------------
 
 
@@ -110,6 +109,7 @@ NI_clusters <- readRDS("../Null Instantiation/Vector_spaces/df_tsne.RDS")
 NI_data_selec3 <- merge(NI_data_selec2, NI_clusters[, c("Lemma", "Cluster")], by.x = "lemma", by.y = "Lemma", all.x = TRUE)
 
 # Rename the Cluster column
+
 names(NI_data_selec3)[which(names(NI_data_concreteness) == "Cluster")] <- "Cluster_Lemma"
 
 NI_data_clustered <- NI_data_selec3
@@ -128,7 +128,14 @@ clusters_cleaned <- clusters_merged[-delete_lines,]
 
 NI_data_clustered_full <- merge(NI_data_clustered, clusters_cleaned[, c("Lemma", "Cluster", "Cluster_clara")], by.x = "lemma", by.y = "Lemma", all.x = TRUE) %>% dplyr::select(-Cluster.y) %>% rename(Cluster_vec = Cluster.x)
 
+
+
+# Variable lemmas ---------------------------------------------------------
+
+# Either use the ones saved or cf. NI_Variable_Lemmas.R for an up-to-date version
+
 variable_lemmas <- readRDS("../Null Instantiation/Vector_spaces/variable_lemmas.RDS")
+
 
 NI_data_clustered_full %>% 
   filter(lemma %in% variable_lemmas) -> NI_data_variable
@@ -153,5 +160,10 @@ for (col in columns_to_convert) {
 NI_data_variable$Object_FE_Realisation <- as.factor(NI_data_variable$Object_FE_Realisation)
 
 NI_data_variable$Object_FE_Realisation <- relevel(NI_data_variable$Object_FE_Realisation, ref = "overt")
+
+# Convert to tibble
+
+NI_data_variable <- as_tibble(NI_data_variable)
+
 
 
