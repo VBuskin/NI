@@ -63,7 +63,7 @@ kwic_NI <- quanteda::kwic(
   #filter(Pattern %in% NI_Verbs_hits)
 
 #kwic_NI_2 <-  tibble(kwic_NI) %>% 
-  mutate(lemma = pattern)
+  #mutate(lemma = pattern)
 
 # Important loop
 
