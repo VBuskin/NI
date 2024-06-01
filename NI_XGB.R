@@ -24,13 +24,7 @@ X <- subset(model_data_xgb, select = -Object_FE_Realisation)
 # Response variable
 y <- as.numeric(model_data_xgb$Object_FE_Realisation) - 1
 
-# Convert response to binary format (1 for null, 0 for overt)
-#y_binary <- ifelse(y == 1, 1, 0)
 
-
-# Convert to numeric vectors
-
-## Features
 # Columns to convert to numeric
 columns_to_convert <- c("Telicity", "Text_category", "lemma", "frame", "Object_Definiteness", "Object_FE_Animacy", "Cluster_vec", "Cluster_clara")
 
@@ -39,12 +33,8 @@ for (col in columns_to_convert) {
   X[[col]] <- as.integer(X[[col]])
 }
 
-#X$Cluster <- as.numeric(X$Cluster)
-#X$Object_Definiteness <- as.numeric(X$Object_Definiteness)
 
 X <- as.matrix(X)
-
-## NOTE: DO NOT STORE COLUMNS AS FACTORS OR ELSE IT GOES TO SHIT
 
 
 # Define train and test data (numeric)
@@ -63,6 +53,11 @@ xgb_model <- xgboost(data = X_train, label = y_train, missing = NA, nrounds = 50
 
 ## Plot tree
 xgb.plot.tree(model = xgb_model, trees = 0, show_node_id = TRUE)
+
+
+
+# Evaluation --------------------------------------------------------------
+
 
 
 # Create a DALEX explainer object for your model

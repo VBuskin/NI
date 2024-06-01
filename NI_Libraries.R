@@ -22,6 +22,11 @@ library("randomForest") # Random forest
 library("e1071") # KNN
 library("class") # ?
 library("MASS") # simulated data sets
+# Unsupervised learning
+library("cluster")
+library("factoextra")
+library("FactoMineR")
+library("Rtsne")
 
 ## Neural networks and Python
 library("tensorflow")
@@ -31,14 +36,17 @@ library("reticulate")
 
 ## Semantic vector spaces and NLP
 
+library("quanteda")
+library("quanteda.textstats")
 library("tm")   
-
 library("topicmodels") # for LDA() and other functions specific to topic models
 library("SnowballC")   # for wordStem()
 library("scales")      # for percent_format()
 library("tidytext")    # for a stopwords list
 library("effsize")     # for the calculation of Vargha and Delaney A measure (effect size of Mann-Whitney U-test)
 library("tidyverse")   # for the ease of data processing and visualisation
+library("word2vec")
+library("proxy") # Distance and Similarity Measures
 
 
 # POS and dependency parsing
