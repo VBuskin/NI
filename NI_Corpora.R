@@ -2,7 +2,6 @@
 # Construct corpora here ----------------------------------------------------
 
 # Load libraries
-
 source("NI_Libraries.R")
 
 
@@ -29,25 +28,25 @@ transcripts_collapsed_GB <- sapply(path_GB, function(x){
 
 # Define NI_Verbs (careful: make sure there's no whitespace before the closing quoation mark ")
 
-NI_data$Pattern
+#NI_regexes <- unique(NI_data_variable$pattern)
 
-NI_Test <- c("eat")
+#NI_Test <- c("eat")
 
 # Create a kwic df
 
-kwic_NI <- quanteda::kwic(
+#kwic_NI <- quanteda::kwic(
   # tokenize transcripts
-  quanteda::tokens(transcripts_collapsed_GB, what = "fasterword"), 
+ # quanteda::tokens(transcripts_collapsed_GB, what = "fasterword"), 
   # define search
-  pattern = quanteda::phrase(NI_Test),
+#  pattern = quanteda::phrase(NI_Test),
   # regex
-  valuetype = "regex",
+ # valuetype = "regex",
   # extend context
-  window = 20) %>%
+#  window = 20) %>%
   # make it a data frame
-  as.data.frame() %>%
+ # as.data.frame() %>%
   # clean docnames
-  dplyr::mutate(docname = str_replace_all(docname, ".*/([A-Z][0-9][A-Z]-[0-9]{1,3}).txt", "\\1")) 
+  #dplyr::mutate(docname = str_replace_all(docname, ".*/([A-Z][0-9][A-Z]-[0-9]{1,3}).txt", "\\1")) 
 
 
 

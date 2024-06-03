@@ -36,4 +36,6 @@ model_data <- NI_data_variable |>
 
 model_data$Object_FE_Realisation <- as.factor(model_data$Object_FE_Realisation)
 
+model_data$Object_FE_Realisation <- relevel(model_data$Object_FE_Realisation, ref = "overt")
+
 
