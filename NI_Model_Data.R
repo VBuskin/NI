@@ -32,4 +32,8 @@ model_data <- NI_data_variable |>
                 as_tibble()
 
 
+# Set reference level(s)
+
+model_data$Object_FE_Realisation <- as.factor(model_data$Object_FE_Realisation)
+
 
