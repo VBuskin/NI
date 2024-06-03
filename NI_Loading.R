@@ -27,8 +27,10 @@ NI_data <- separate_wider_delim(NI_data, cols = docname, delim = "-", names = c(
 
 c_ratings <- read.table("../Null Instantiation/Concreteness_ratings.csv", sep = "\t", header = TRUE)
 
+# Create empty list environment
 lemma_rating <- list()
 
+# Start loops
 for (i in unique(NI_data$lemma)) {
   
   # Extract rating for a lemma i
