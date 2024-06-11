@@ -5,63 +5,68 @@
 
 source("NI_Libraries.R")
 source("NI_Loading.R")
+source("NI_Corpora.R") # get function definitions
 
-# Read in and clean corpus
+# Call corpus functions
 
-# define corpus files
-path_GB <- list.files("../../Null Instantiation/Corpora/ICE_GB", full.names = TRUE)
-# load corpus files
-transcripts_GB <- sapply(path_GB, function(x){
-  x <- readLines(x)
-})
+## Read in ICE-GB
+read_GB()
 
-# Collapse every transcript into a single character vector
-transcripts_collapsed_GB <- sapply(path_GB, function(x){
-  # read-in text
-  x <- readLines(x)
-  # paste all lines together
-  x <- paste0(x, collapse = " ")
-  # remove superfluous white spaces
-  x <- str_squish(x)
-})
+## Read in ICE-SING
+read_SING()
 
-# Lemmatise ICE-GB
 
-ICE_GB_lemmatised <- tokens_replace(tokens(transcripts_collapsed_GB),
+# Lemmatise corpora -------------------------------------------------------
+
+
+lemmatise_ICE <- function(corpus) {
+
+Corpus_lemmatised <- tokens_replace(tokens(corpus),
                                     pattern = lexicon::hash_lemmas$token,
                                     replacement = lexicon::hash_lemmas$lemma)
 
 # Convert everything to lowercase
 
-ICE_GB_lemmatised |> 
-  tokens_tolower() -> ICE_GB_lemmatised_low
+Corpus_lemmatised |> tokens_tolower() -> Corpus_lemmatised_low
 
 ## Detokenize the corpus and remove superfluous white spaces
 
-ICE_GB_lemmatised_clean <- lapply(ICE_GB_lemmatised_low, paste, collapse = " ")
+Corpus_lemmatised_clean <- lapply(Corpus_lemmatised_low, paste, collapse = " ")
 
-ICE_GB_lemmatised_clean <- str_squish(ICE_GB_lemmatised_clean)
+Corpus_lemmatised_clean <- str_squish(Corpus_lemmatised_clean)
 
 
 ## Remove corpus annotation (cf. Leuckert 2019: 89)
 
 ### 1st layer: Remove extra-corpus text (<X> ... </X>)
 
-ICE_GB_lemmatised_clean1 <- gsub("<\\s*X[^>]*>(.*?)<\\s*/\\s*X>", "", ICE_GB_lemmatised_clean)
+Corpus_lemmatised_clean1 <- gsub("<\\s*X[^>]*>(.*?)<\\s*/\\s*X>", "", Corpus_lemmatised_clean)
 
 ### 2nd layer: Remove untranscribed text (<O> ... </O>)
 
-ICE_GB_lemmatised_clean2 <- gsub("<\\s*O[^>]*>(.*?)<\\s*/\\s*O>", "", ICE_GB_lemmatised_clean1)
+Corpus_lemmatised_clean2 <- gsub("<\\s*O[^>]*>(.*?)<\\s*/\\s*O>", "", Corpus_lemmatised_clean1)
 
 ### 3rd layer: Remove editorial comments (<&> ... </&>)
 
-ICE_GB_lemmatised_clean3 <- gsub("<\\s*&[^>]*>(.*?)<\\s*/\\s*&>", "", ICE_GB_lemmatised_clean2)
+Corpus_lemmatised_clean3 <- gsub("<\\s*&[^>]*>(.*?)<\\s*/\\s*&>", "", Corpus_lemmatised_clean2)
 
 ### 4th layer: Remove all remaining (in-line) tags (< ... >)
 
-ICE_GB_lemmatised_clean4 <- gsub("<(.*?)>", "", ICE_GB_lemmatised_clean3)
+Corpus_lemmatised_clean4 <- gsub("<(.*?)>", "", Corpus_lemmatised_clean3)
 
-#head(ICE_GB_lemmatised_clean4)
+### Return the fully-processed corpus object
+
+Corpus_lemmatised_final <<- Corpus_lemmatised_clean4
+
+}
+
+
+# Apply function to corpus objects
+
+ICE_GB_lemmatised <- lemmatise_ICE(transcripts_collapsed_GB)
+
+ICE_SING_lemmatised <- lemmatise_ICE(transcripts_collapsed_SING)
+
 
 
 ## Fit DSM -----------------------------------------------------------------
@@ -71,11 +76,13 @@ ICE_GB_lemmatised_clean4 <- gsub("<(.*?)>", "", ICE_GB_lemmatised_clean3)
 
 #saveRDS(ICE_GB_lemmatised_clean4, "Corpora/ICE_GB_lemmatised.RDS")
 
-ICE_GB_lemmatised_clean4 <- readRDS("../Null Instantiation/Corpora/ICE_GB_lemmatised.RDS")
+#ICE_GB_lemmatised <- readRDS("../Null Instantiation/Corpora/ICE_GB_lemmatised.RDS")
 
-# Fit model
+# Fit distributional model
 
-ICE_GB_vec <- word2vec(ICE_GB_lemmatised_clean4, window = 5, dim = 20, iter = 10, type = "skip-gram", hs = TRUE, sample = 0.001)
+corpus_object <- ICE_GB_lemmatised
+
+ICE_GB_vec <- word2vec(corpus_object, window = 5, dim = 20, iter = 10, type = "skip-gram", hs = TRUE, sample = 0.001)
 
 
 # REQUIRES NI_DATA DF from here on out (cf. NI_Loading.R)

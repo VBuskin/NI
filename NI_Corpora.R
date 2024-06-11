@@ -1,28 +1,61 @@
 
 # Construct corpora here ----------------------------------------------------
 
+
+
+## British English ---------------------------------------------------------
+
+
 # Load libraries
 source("NI_Libraries.R")
 
 
-# define corpus files
-path_GB <- list.files("../Null Instantiation/Corpora/ICE_GB", full.names = TRUE)
+read_GB <- function() {
 
-# load corpus files
-transcripts_GB <- sapply(path_GB, function(x){
-  x <- readLines(x)
-})
+  # define corpus files
+  path_GB <- list.files("../Null Instantiation/Corpora/ICE_GB", full.names = TRUE)
+  
+  # load corpus files
+  transcripts_GB <- sapply(path_GB, function(x){
+    x <- readLines(x)
+  })
+  
+  # Collapse every transcript into a single character vector
+  transcripts_collapsed_GB <<- sapply(path_GB, function(x){
+    # read-in text
+    x <- readLines(x)
+    # paste all lines together
+    x <- paste0(x, collapse = " ")
+    # remove superfluous white spaces
+    x <- str_squish(x)
+  })
+}
 
-# Collapse every transcript into a single character vector
-transcripts_collapsed_GB <- sapply(path_GB, function(x){
-  # read-in text
-  x <- readLines(x)
-  # paste all lines together
-  x <- paste0(x, collapse = " ")
-  # remove superfluous white spaces
-  x <- str_squish(x)
-})
 
+## Singapore English -------------------------------------------------------
+
+read_SING <- function() {
+
+  # define corpus files
+  path_SING <- list.files("../Null Instantiation/Corpora/ICE_SING", full.names = TRUE)
+  
+  # load corpus files
+  transcripts_SING <- sapply(path_SING, function(x){
+    x <- readLines(x)
+  })
+  
+  # Collapse every transcript into a single character vector
+  transcripts_collapsed_SING <<- sapply(path_SING, function(x){
+    # read-in text
+    x <- readLines(x)
+    # paste all lines together
+    x <- paste0(x, collapse = " ")
+    # remove superfluous white spaces
+    x <- str_squish(x)
+  })
+}
+
+read_SING()
 
 ## Run multiple searches ---------------------------------------------------
 
