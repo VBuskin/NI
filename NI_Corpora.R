@@ -83,14 +83,13 @@ kwic_ICE <- function(corpus, query) {
   as_tibble()
 }
 
-kwic_SING <- kwic_ICE(transcripts_collapsed_SING, kwic_regexes)
+#kwic_SING <- kwic_ICE(transcripts_collapsed_SING, kwic_regexes)
 
 
 
 # Get regexes -------------------------------------------------------------
 
 #kwic_regexes <- unique(NI_data$pattern) # requires Summary 12-06-2024 or more recent
-
 
 
 
@@ -113,7 +112,7 @@ lemmatise_kwic <- function(kwic_object, lemma_source) {
 }
 
 
-kwic_SING_lemmatised <- lemmatise_kwic(kwic_SING, NI_data)
+#kwic_SING_lemmatised <- lemmatise_kwic(kwic_SING, NI_data)
 
 # Split hits --------------------------------------------------------------
 
@@ -124,16 +123,16 @@ kwic_SING_lemmatised <- lemmatise_kwic(kwic_SING, NI_data)
 
 # Split files according to their lemmas
 
-df_to_split <- kwic_SING_lemmatised
+#df_to_split <- kwic_SING_lemmatised
 
-splitData <- split(df_to_split, list(df_to_split$lemma))
+#splitData <- split(df_to_split, list(df_to_split$lemma))
 
 
 # Write an .xlsx file for each element in splitData, using the lemmas as file names
 
-for (i in names(splitData)) {
-  write_xlsx(splitData[[i]], paste0(i, ".xlsx"))
-}
+#for (i in names(splitData)) {
+ # write_xlsx(splitData[[i]], paste0(i, ".xlsx"))
+#}
 
 
 

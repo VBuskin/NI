@@ -7,40 +7,53 @@ source("NI_Vector_spaces.R")
 
 # K-means -----------------------------------------------------------------
 
-# Perform k-means clustering
+# Preparation
 set.seed(123) # For reproducibility
 
-# Check for NA values in embeddings
-na_indices <- which(apply(NI_w2v_mat, 1, function(x) any(is.na(x))))
+# Run this prior to running the clustering algorithms
 
-# If there are NA values, remove those rows
-if (length(na_indices) > 0) {
-  NI_w2v_mat <- NI_w2v_mat[-na_indices, ]
-  NI_lemmas <- NI_lemmas[-na_indices]
+remove_duplicates_to_df <- function(similarity_matrix) {
+
+  # Combine embeddings and lemmas into a data frame
+  embedding_df <- data.frame(similarity_matrix, Lemma = unique(NI_data$lemma))
+  
+  # Remove duplicate rows based on the embeddings
+  embedding_df_unique <<- embedding_df[!duplicated(embedding_df[, 1:ncol(similarity_matrix)]), ]
+  
+  # Separate back into embeddings and lemmas
+  embedding_NI_unique <- as.matrix(embedding_df_unique[, 1:ncol(similarity_matrix)])
+  
+  # Final df
+  cluster_data <- embedding_NI_unique
+  
+  return(cluster_data)
+
 }
 
-# Ensure no NA values
-if (any(is.na(NI_w2v_mat))) {
-  stop("There are still NA values in the embeddings.")
-}
+GB_sim_mat <- remove_duplicates_to_df(GB_sim_mat)
 
-# Combine embeddings and lemmas into a data frame
-embedding_df <- data.frame(NI_w2v_mat, Lemma = NI_lemmas)
+SING_sim_mat <- remove_duplicates_to_df(SING_sim_mat)
 
-# Remove duplicate rows based on the embeddings
-embedding_df_unique <- embedding_df[!duplicated(embedding_df[, 1:ncol(embedding_NI)]), ]
+#NI_lemmas_unique <- embedding_df_unique$Lemma
 
-# Separate back into embeddings and lemmas
-embedding_NI_unique <- as.matrix(embedding_df_unique[, 1:ncol(embedding_NI)])
+# K-means
 
-NI_lemmas_unique <- embedding_df_unique$Lemma
+data_for_clustering <- GB_sim_mat
+
+data_for_clustering <- SING_sim_mat
+
+kmeans_result <- kmeans(data_for_clustering, centers = 2) # or
+
+pam_result <- pam(embedding_NI_unique, k = 2) # which is more robust to outliers
+
+# Visualisation and optimal number of clusters
 
 # Identify optimal number of clusters
 
-optimal_clusters_k_means_lem <- fviz_nbclust(embedding_NI_unique, FUNcluster = kmeans, method = "silhouette") + theme_classic() + ggtitle("optimal numbers of clusters - kmeans")
+optimal_clusters_k_means_lem <- fviz_nbclust(data_for_clustering, FUNcluster = kmeans, method = "silhouette") + theme_classic() + ggtitle("optimal numbers of clusters - kmeans")
 
 # Fit k-means model
-kmeans_result <- kmeans(embedding_NI_unique, centers = 2) # or
+kmeans_result <- kmeans(data_for_clustering, centers = 2) # or
 pam_result <- pam(embedding_NI_unique, k = 2) # more robust to outliers
 
 # Print cluster assignments
@@ -48,30 +61,38 @@ print(kmeans_result$cluster)
 
 # Plot them
 
-fviz_cluster(list(data=embedding_NI_unique, cluster=kmeans_result$cluster), 
+fviz_cluster(list(data=data_for_clustering, cluster=kmeans_result$cluster), 
              ellipse.type="norm", geom="point", stand=FALSE, palette="jco", ggtheme=theme_classic())
 
 
 
 # Dimensionality reduction ------------------------------------------------
 
+# Requires running remove_duplicates_to_df() and the embedding_df_unique$Lemma object
+
+reduce_dim <- function(cluster_data) {
 
 # Perform t-SNE to reduce dimensions to 2
-tsne_result <- Rtsne(embedding_NI_unique, dims = 2)
+tsne_result <- Rtsne(cluster_data, dims = 2)
 
 # Create a data frame with the 2D coordinates and lemma names
-df_tsne <- data.frame(tsne_result$Y, Lemma = NI_lemmas_unique)
+df_tsne <- data.frame(tsne_result$Y, Lemma = embedding_df_unique$Lemma)
+
 df_tsne$Cluster <- as.factor(kmeans_result$cluster)
 
+return(df_tsne)
 
-# Rename the Cluster column
-#names(NI_data_concreteness)[which(names(NI_data_concreteness) == "Cluster")] <- "Cluster_Lemma"
+}
 
+GB_tsne <- reduce_dim(data_for_clustering)
 
-#colnames(df_tsne) <- c("X1", "X2", "Lemma")
+SING_tsne <- reduce_dim(data_for_clustering)
 
-# SIMILARITY PLOT + CLUSTERS!!
-ggplot(df_tsne, aes(x = X1, y = X2, color = Cluster, label = Lemma)) +
+#SING_tsne <- reduce_dim(data_for_clustering)
+
+# Similarity + clusters plot
+
+ggplot(GB_tsne, aes(x = X1, y = X2, color = Cluster, label = Lemma)) +
   geom_point(color = "steelblue", size = 3) +
   geom_text(vjust = 1.5, hjust = 0.5) +
   ggtitle("Visualization of Lemmas in the ICE-GB Vector Space") +
@@ -80,6 +101,71 @@ ggplot(df_tsne, aes(x = X1, y = X2, color = Cluster, label = Lemma)) +
 #df_tsne[df_tsne$Cluster == 2,]$Lemma
 
 
+
+ggplot(SING_tsne, aes(x = X1, y = X2, color = Cluster, label = Lemma)) +
+  geom_point(color = "steelblue", size = 3) +
+  geom_text(vjust = 1.5, hjust = 0.5) +
+  ggtitle("Visualization of Lemmas in the ICE-SING Vector Space") +
+  theme_minimal() +
+  labs(subtitle = "Reduced to two dimensions using t-Distributed Stochastic Neighbor Embedding (t-SNE)")
+
+
+
+# Compare similarity matrices ---------------------------------------------
+
+# Make sure to only consider the common set of lemmas
+common_lemmas <- intersect(GB_tsne$Lemma, SING_tsne$Lemma)
+
+# Subset the matrices to the common words
+GB_tsne_common <- GB_tsne %>% dplyr::filter(Lemma %in% common_lemmas)
+SING_tsne_common <- SING_tsne %>% dplyr::filter(Lemma %in% common_lemmas)
+
+# Ensure the order of lemmas is the same in both dataframes
+GB_tsne_common <- GB_tsne_common[match(common_lemmas, GB_tsne_common$Lemma), ]
+SING_tsne_common <- SING_tsne_common[match(common_lemmas, SING_tsne_common$Lemma), ]
+
+
+# Extract t-SNE coordinates
+GB_coords <- as.matrix(GB_tsne_common[, c("X1", "X2")])
+SING_coords <- as.matrix(SING_tsne_common[, c("X1", "X2")])
+
+# Frobenius Norm
+frobenius_norm <- function(mat1, mat2) {
+  sqrt(sum((mat1 - mat2)^2))
+}
+
+frobenius_dist <- frobenius_norm(GB_coords, SING_coords)
+print(frobenius_dist)
+
+# Correlation
+correlation <- cor(as.vector(GB_coords), as.vector(SING_coords))
+print(correlation)
+
+# Plot GB t-SNE
+ggplot(GB_tsne_common, aes(x = X1, y = X2, color = as.factor(Cluster))) +
+  geom_point() +
+  ggtitle("GB t-SNE Plot")
+
+# Plot SING t-SNE
+ggplot(SING_tsne_common, aes(x = X1, y = X2, color = as.factor(Cluster))) +
+  geom_point() +
+  ggtitle("SING t-SNE Plot")
+
+# Try to install library("vegan") after disabling your Conda environment
+
+# Function to perform Procrustes analysis using MASS package
+procrustes_mass <- function(X, Y) {
+  # Perform Procrustes analysis
+  procrustes_result <- MASS::procrustes(X, Y)
+  
+  # Procrustes distance
+  procrustes_distance <- procrustes_result$ss
+  return(procrustes_distance)
+}
+
+# Compute Procrustes distance
+procrustes_distance <- procrustes_mass(GB_coords, SING_coords)
+print(paste("Procrustes Distance: ", procrustes_distance))
 
 # Inspection --------------------------------------------------------------
 

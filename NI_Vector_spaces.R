@@ -67,76 +67,71 @@ ICE_GB_lemmatised <- lemmatise_ICE(transcripts_collapsed_GB)
 
 ICE_SING_lemmatised <- lemmatise_ICE(transcripts_collapsed_SING)
 
+#saveRDS(ICE_GB_lemmatised_clean4, "Corpora/ICE_GB_lemmatised.RDS")
+
+#ICE_GB_lemmatised <- readRDS("../Null Instantiation/Corpora/ICE_GB_lemmatised.RDS")
 
 
 ## Fit DSM -----------------------------------------------------------------
 
 
-# Cleaned ICE_GB (save or read in)
-
-#saveRDS(ICE_GB_lemmatised_clean4, "Corpora/ICE_GB_lemmatised.RDS")
-
-#ICE_GB_lemmatised <- readRDS("../Null Instantiation/Corpora/ICE_GB_lemmatised.RDS")
-
-# Fit distributional model
-
-corpus_object <- ICE_GB_lemmatised
-
-ICE_GB_vec <- word2vec(corpus_object, window = 5, dim = 20, iter = 10, type = "skip-gram", hs = TRUE, sample = 0.001)
-
-
-# REQUIRES NI_DATA DF from here on out (cf. NI_Loading.R)
-
-## Apply to those NI verbs that occur in the results
-
-NI_lemmas <- unique(NI_data$lemma) # there must be some that cause problems
-
-
-## Create embedding
-
-embedding_NI <- predict(ICE_GB_vec, NI_lemmas, type = "embedding")
-
-# Function to compute cosine similarity (dotted product / euclidian distances)
+# Cosine similarity function (cf. Clark 2015)
 
 cosine_similarity <- function(x, y) {
   sum(x * y) / (sqrt(sum(x * x)) * sqrt(sum(y * y)))
 }
 
+# Requires NI_data df and cosine_similarity() from here on out (cf. NI_Loading.R)
 
-# Create a matrix to store similarities
+vector_space <- function(corpus_object, lemmas) {
 
-similarity_matrix <- matrix(0, nrow = length(NI_lemmas), ncol = length(NI_lemmas))
-rownames(similarity_matrix) <- colnames(similarity_matrix) <- NI_lemmas
+  # Fit distributional model
+  vector_space <- word2vec(corpus_object, window = 5, dim = 20, iter = 10, type = "skip-gram", hs = TRUE, sample = 0.001)
 
-# Calculate pairwise similarities
-
-for (i in 1:length(NI_lemmas)) {
-  for (j in 1:length(NI_lemmas)) {
-    similarity_matrix[i, j] <- cosine_similarity(embedding_NI[i, ], embedding_NI[j, ])
+  # Fit embedding
+  embedding <- predict(vector_space, lemmas, type = "embedding")
+  
+  # Create a matrix to store similarities
+  similarity_matrix <- matrix(0, nrow = length(lemmas), ncol = length(lemmas))
+  
+  rownames(similarity_matrix) <- colnames(similarity_matrix) <- lemmas
+  
+  # Calculate pairwise similarities
+  
+  for (i in 1:length(lemmas)) {
+    for (j in 1:length(lemmas)) {
+      similarity_matrix[i, j] <- cosine_similarity(embedding[i, ], embedding[j, ])
+    }
   }
+  
+  # Sanitize the similarity matrix by replacing NA/NaN/Inf values with 0 or other appropriate values
+  similarity_matrix[is.na(similarity_matrix)] <- 0
+  similarity_matrix[is.infinite(similarity_matrix)] <- 0
+  
+  
+  # Convert to matrix
+  NI_sim_mat <- similarity_matrix
+  
+  # Final clean-up
+  
+  ## Check for NA values in embeddings
+  na_indices <- which(apply(NI_sim_mat, 1, function(x) any(is.na(x))))
+  
+  ## If there are NA values, remove those rows
+  if (length(na_indices) > 0) {
+    NI_sim_mat <- NI_sim_mat[-na_indices, ]
+    lemmas <- lemmas[-na_indices]
+  }
+  
+  ## Ensure there are no NA values
+  if (any(is.na(NI_sim_mat))) {
+    stop("There are still NA values in the embeddings.")
+  }
+  
+  return(NI_sim_mat)
+
 }
 
+GB_sim_mat <- vector_space(ICE_GB_lemmatised, unique(NI_data$lemma))
 
-# Show individual values
-# or
-#library("proxy")
-#proxy::simil(embedding_NI["eat",], method = "cosine")
-
-# These two lines are equivalent
-
-cosine_similarity(embedding_NI["eat",], embedding_NI["drink",])
-
-sim_mat <- as.matrix(proxy::simil(embedding_NI[c("eat", "drink"), , drop = FALSE], method = "cosine"))
-
-
-# Sanitize the similarity matrix by replacing NA/NaN/Inf values with 0 or other appropriate values
-
-similarity_matrix[is.na(similarity_matrix)] <- 0
-similarity_matrix[is.infinite(similarity_matrix)] <- 0
-
-
-# Convert to matrix
-
-NI_w2v_mat <- similarity_matrix
-
-
+SING_sim_mat <- vector_space(ICE_SING_lemmatised, unique(NI_data$lemma))
