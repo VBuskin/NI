@@ -167,6 +167,48 @@ procrustes_mass <- function(X, Y) {
 procrustes_distance <- procrustes_mass(GB_coords, SING_coords)
 print(paste("Procrustes Distance: ", procrustes_distance))
 
+
+# Function to compute absolute differences for each lemma and return as a dataframe
+compute_absolute_differences_df <- function(GB_data, SING_data) {
+  # Initialize dataframe to store results
+  absolute_diff_df <- data.frame(lemma = character(), absolute_difference = numeric(), stringsAsFactors = FALSE)
+  
+  # Get unique lemmas
+  unique_lemmas <- unique(GB_data$Lemma)
+  
+  # Iterate through each lemma
+  for (lemma in unique_lemmas) {
+    # Extract coordinates for the current lemma in GB data
+    GB_coords <- GB_data[GB_data$Lemma == lemma, c("X1", "X2")]
+    
+    # Extract coordinates for the current lemma in SING data
+    SING_coords <- SING_data[SING_data$Lemma == lemma, c("X1", "X2")]
+    
+    # Compute absolute difference for the current lemma
+    absolute_diff <- sqrt(rowSums((GB_coords - SING_coords)^2))
+    
+    # Compute mean absolute difference for the current lemma
+    mean_absolute_diff <- mean(absolute_diff)
+    
+    # Append results to dataframe
+    absolute_diff_df <- rbind(absolute_diff_df, data.frame(lemma = lemma, absolute_difference = mean_absolute_diff))
+  }
+  
+  return(absolute_diff_df)
+}
+
+# Compute absolute differences for each lemma and store as dataframe
+absolute_diff_df <- compute_absolute_differences_df(GB_tsne_common, SING_tsne_common)
+
+# Print dataframe
+print(absolute_diff_df)
+
+absolute_diff_df %>% 
+  arrange(absolute_difference)
+
+
+
+
 # Inspection --------------------------------------------------------------
 
 
