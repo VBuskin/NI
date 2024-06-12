@@ -2,7 +2,6 @@
 # Construct corpora here ----------------------------------------------------
 
 
-
 ## British English ---------------------------------------------------------
 
 
@@ -31,6 +30,7 @@ read_GB <- function() {
   })
 }
 
+#read_GB()
 
 ## Singapore English -------------------------------------------------------
 
@@ -55,9 +55,9 @@ read_SING <- function() {
   })
 }
 
-read_SING()
+#read_SING()
 
-## Run multiple searches ---------------------------------------------------
+## Query corpora  ---------------------------------------------------
 
 # Define NI_Verbs (careful: make sure there's no whitespace before the closing quoation mark ")
 
@@ -65,41 +65,75 @@ read_SING()
 
 #NI_Test <- c("eat")
 
-# Create a kwic df
 
-#kwic_NI <- quanteda::kwic(
+kwic_ICE <- function(corpus, query) { 
+  quanteda::kwic(
   # tokenize transcripts
- # quanteda::tokens(transcripts_collapsed_GB, what = "fasterword"), 
+  quanteda::tokens(corpus, what = "fasterword"), 
   # define search
-#  pattern = quanteda::phrase(NI_Test),
+  pattern = quanteda::phrase(query),
   # regex
- # valuetype = "regex",
+  valuetype = "regex",
   # extend context
-#  window = 20) %>%
+  window = 20) %>%
   # make it a data frame
- # as.data.frame() %>%
+  as.data.frame() %>%
   # clean docnames
-  #dplyr::mutate(docname = str_replace_all(docname, ".*/([A-Z][0-9][A-Z]-[0-9]{1,3}).txt", "\\1")) 
+  dplyr::mutate(docname = str_replace_all(docname, ".*/([A-Z][0-9][A-Z]-[0-9]{1,3}).txt", "\\1")) %>% 
+  as_tibble()
+}
+
+kwic_SING <- kwic_ICE(transcripts_collapsed_SING, kwic_regexes)
 
 
 
-## Lemmatise hits (inactive) ----------------------------------------------------------
+# Get regexes -------------------------------------------------------------
+
+#kwic_regexes <- unique(NI_data$pattern) # requires Summary 12-06-2024 or more recent
 
 
-# Define verbs to select from (it works!!!)
 
-#NI_Verbs_hits <- as.character(levels(kwic_NI$pattern))
 
-#NI_Lemmas_kwic <- NI_data %>% 
- # select(Pattern, NI_Verb) %>% 
-  #filter(Pattern %in% NI_Verbs_hits)
+## Lemmatise hits ----------------------------------------------------------
 
-#kwic_NI_2 <-  tibble(kwic_NI) %>% 
-  #mutate(lemma = pattern)
 
-# Important loop
+# Define verbs to select from (working)
 
-#for (x in kwic_NI) {
- # kwic_NI_lemmatised <- kwic_NI %>% 
- #   mutate(lemma = NI_data[match(kwic_NI$pattern, NI_data$Pattern),]$NI_Verb)
-#}
+
+lemmatise_kwic <- function(kwic_object, lemma_source) {
+  
+  for (x in kwic_object) {
+    kwic_lemmatised <- kwic_object %>% 
+      # Requires lemma source to contain the columns "pattern" and "lemma"
+      mutate(lemma = lemma_source[match(kwic_object$pattern, lemma_source$pattern),]$lemma)
+  }
+  # Return the lemmatised kwic df
+  return(kwic_lemmatised)
+  
+}
+
+
+kwic_SING_lemmatised <- lemmatise_kwic(kwic_SING, NI_data)
+
+# Split hits --------------------------------------------------------------
+
+# Store individual hits (optional)
+
+#kwic_NI %>% 
+ # filter(pattern == "\bsaut(e(s|d)?|ing)?\b")
+
+# Split files according to their lemmas
+
+df_to_split <- kwic_SING_lemmatised
+
+splitData <- split(df_to_split, list(df_to_split$lemma))
+
+
+# Write an .xlsx file for each element in splitData, using the lemmas as file names
+
+for (i in names(splitData)) {
+  write_xlsx(splitData[[i]], paste0(i, ".xlsx"))
+}
+
+
+
