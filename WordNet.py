@@ -23,6 +23,7 @@ from pywsd import disambiguate
 from pywsd.lesk import simple_lesk
 from pywsd.similarity import max_similarity as maxsim
 from nltk.corpus import wordnet as wn
+from nltk.tokenize import word_tokenize
 
 # Get synsets for the lemma 'eat'
 synsets = wn.synsets('eat', pos=wn.VERB)

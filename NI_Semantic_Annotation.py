@@ -22,37 +22,72 @@ print(python_input_df_py) # Print imported df
 
 sentence = str(python_input_df_py.iloc[0, 2])
 
+
+# Works
+
 verb_dis = disambiguate(sentence, similarity_option='wup', keepLemmas=True)
 
-# Iterate through verb_dis to find the meaning of 'Accepting'
-verb_sense = None
+# This is the result I need
+verb_sense = maxsim(sentence, 'accepting', pos='v', option='wup')
 
-for token in verb_dis:
-  lemma = token[1]  # Get the lemma of the token
-  if lemma == 'Accepting':
-      print(f"Meaning of 'Accepting': {token[2]} ({token[2].definition() if token[2] else None})")
-      break  # Exit loop once found
+# Let's do this for all sentences
 
-# Initialize an empty list to store the sense information
+input_sentences = python_input_df_py['text_cleaned'].tolist()
+
+
+# input_sentences[2]
+
+output_list = list()
+
+for (i in 1:nrow(python_input_df_py)) {
+  
+  lemma_sense[i] = maxsim(python_input_df_py$text_cleaned[i], python_input_df_py$keyword[i], pos='v', option='wup')
+}
+
+
+## WORKS 
+
+# Function to get the best sense for a keyword in a sentence
+def get_best_sense(sentence, keyword):
+    # Tokenize the sentence and convert it to a list of lemmas
+    tokens = nltk.word_tokenize(sentence)
+    
+     # Convert lemmas list back to a string to use as context in maxsim
+    context_sentence = ' '.join(tokens)
+    
+    # Find the best sense of the keyword in the context of the sentence
+    best_sense = maxsim(context_sentence, keyword, pos='v', option='wup')
+    
+    return best_sense
+
+get_best_sense("I eat food.", "eat")
+
+# Iterate
+
 senses_data = []
 
-sense = None
-for token in verb_dis:
-  lemma = token[1]  # Get the lemma of the token
-  if lemma == keyword:  # Check if the lemma is 'eat'
-      sense = (token[0], token[1], token[2])  # Extract the relevant information
-      break  # Exit loop once found
+# Iterate over each row in the DataFrame
+for i, row in python_input_df_py.iterrows():
+    sentence = row['text_cleaned']
+    keyword = row['keyword'].lower()  # Ensure keyword matching is case-insensitive
+    
+    # Get the best sense for the keyword in the sentence
+    best_sense = get_best_sense(sentence, keyword)
+    
+    # Append the result to the senses_data list
+    senses_data.append({
+        "lemma": row['lemma'],
+        "keyword": row['keyword'],
+        "text_cleaned": sentence,
+        "sense": str(best_sense) if best_sense else None,
+        "definition": best_sense.definition() if best_sense else None
+    })
 
-# If eat_sense is found, add it to the senses_data list
-if sense:
-  senses_data.append({
-      "Sentence": sentence,
-      "Word": sense[0],
-      "Lemma": sense[1],
-      "Sense": str(sense[2]),  # Convert Synset to string
-      "Definition": sense[2].definition() if sense[2] else None  # Get definition if Synset exists
-  })
-  
-df = pd.DataFrame(senses_data)
+# Create a new DataFrame from the senses_data list
+senses_df = pd.DataFrame(senses_data)
 
-df
+# Display the DataFrame
+print(senses_df) # holy fuck, this actually worked
+
+
+
