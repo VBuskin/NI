@@ -4,6 +4,9 @@ library("tidyverse")
 library("readxl")
 library("writexl")
 
+# For Python
+library("reticulate")
+
 ## Statistics and ML
 library("EnvStats")
 library("boot") # bootstrapping

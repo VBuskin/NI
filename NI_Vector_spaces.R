@@ -5,7 +5,7 @@
 
 source("NI_Libraries.R")
 source("NI_Loading.R")
-source("NI_Corpora.R") # get function definitions
+source("NI_Corpora.R") 
 
 # Call corpus functions
 
