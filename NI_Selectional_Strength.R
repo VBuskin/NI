@@ -122,5 +122,7 @@ senses_df %>% View()
 
 # Perfect! Just need to do this on a larger scale and I'm good.
 
+# For the selectional strength, I might need to this for the objects too.
+
 
 
