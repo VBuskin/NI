@@ -18,31 +18,23 @@ from nltk.tokenize import word_tokenize
 
 # Accessing data from NI_Selectional_Strength in Python environment
 
-print(python_input_df_py) # Print imported df
+#print(python_input_df_py) # Print imported df
 
-sentence = str(python_input_df_py.iloc[0, 2])
-
+#sentence = str(python_input_df_py.iloc[0, 2])
 
 # Works
 
-verb_dis = disambiguate(sentence, similarity_option='wup', keepLemmas=True)
+#verb_dis = disambiguate(sentence, similarity_option='wup', keepLemmas=True)
 
 # This is the result I need
-verb_sense = maxsim(sentence, 'accepting', pos='v', option='wup')
+#verb_sense = maxsim(sentence, 'accepting', pos='v', option='wup')
 
 # Let's do this for all sentences
 
-input_sentences = python_input_df_py['text_cleaned'].tolist()
+#input_sentences = python_input_df_py['text_cleaned'].tolist()
 
 
 # input_sentences[2]
-
-output_list = list()
-
-for (i in 1:nrow(python_input_df_py)) {
-  
-  lemma_sense[i] = maxsim(python_input_df_py$text_cleaned[i], python_input_df_py$keyword[i], pos='v', option='wup')
-}
 
 
 ## WORKS 
@@ -60,7 +52,7 @@ def get_best_sense(sentence, keyword):
     
     return best_sense
 
-get_best_sense("I eat food.", "eat")
+#get_best_sense("I eat food.", "eat")
 
 # Iterate
 
@@ -88,6 +80,10 @@ senses_df = pd.DataFrame(senses_data)
 
 # Display the DataFrame
 print(senses_df) # holy fuck, this actually worked
+
+# Now convert it back to an R object
+
+
 
 
 

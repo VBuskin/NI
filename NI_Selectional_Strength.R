@@ -100,8 +100,27 @@ py$assign("python_input_df_py", python_input_df_py)
 
 # Read in Python data -----------------------------------------------------
 
+#load("r_workspace.RData")
+
+# Source the script
+source_python("NI_Semantic_Annotation.py")
+
+# Convert target df to R object
+senses_df <- py$senses_df
+
+senses_df <- as_tibble(senses_df)
+
+# View
+as_tibble(senses_df) %>% View()
+
+# Clean up the df ---------------------------------------------------------
+
+# Clean up the 'sense' column to remove "Synset('...')" and keep only the sense ID
+senses_df$sense <- gsub("^Synset\\('(.*)'\\)$", "\\1", senses_df$sense)
+
+senses_df %>% View()
+
+# Perfect! Just need to do this on a larger scale and I'm good.
 
 
-load("r_workspace.RData")
 
-as_tibble(R_df)
