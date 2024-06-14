@@ -141,6 +141,14 @@ senses_df %>% View()
 # For the selectional strength, I might need to this for the objects too.
 
 
+# Merge with main df ------------------------------------------------------
+
+NI_data_parsed$sense <- senses_df$sense
+NI_data_parsed$definition <- senses_df$definition
+
+saveRDS(NI_data_parsed, "R_data/NI_data_sem_parsed_14_06_2024.RDS")
+
+
 # Part II: Identifying objects --------------------------------------------
 
 

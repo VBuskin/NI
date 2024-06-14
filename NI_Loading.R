@@ -25,41 +25,46 @@ NI_data <- separate_wider_delim(NI_data, cols = docname, delim = "-", names = c(
 
 # Concreteness ------------------------------------------------------------
 
-c_ratings <- read.table("../Null Instantiation/Concreteness_ratings.csv", sep = "\t", header = TRUE)
-
-# Create empty list environment
-lemma_rating <- list()
-
-# Start loops
-for (i in unique(NI_data$lemma)) {
+concreteness_annotation <- function(data) {
   
-  # Extract rating for a lemma i
-  rating <- c_ratings[c_ratings$Word == i,]$Conc.M
+  c_ratings <- read.table("../Null Instantiation/Concreteness_ratings.csv", sep = "\t", header = TRUE)
   
-  # Extract sd for a lemma i
-  sd <- c_ratings[c_ratings$Word == i,]$Conc.SD
+  # Create empty list environment
+  lemma_rating <- list()
   
-  # Add results to a tibble
-  tibble(lemma = i,
-         concreteness = rating,
-         dispersion = sd
-  ) %>% 
-    mutate(cv = sd / rating) -> output_df
+  # Start loop
+  for (i in unique(data$lemma)) {
+    
+    # Extract rating for a lemma i
+    rating <- c_ratings[c_ratings$Word == i,]$Conc.M
+    
+    # Extract sd for a lemma i
+    sd <- c_ratings[c_ratings$Word == i,]$Conc.SD
+    
+    # Add results to a tibble
+    tibble(lemma = i,
+           concreteness = rating,
+           dispersion = sd
+    ) %>% 
+      mutate(cv = sd / rating) -> output_df
+    
+    # Store result of each iteration
+    lemma_rating[[i]] <- output_df
+    
+  }
   
-  # Store result of each iteration
-  lemma_rating[[i]] <- output_df
+  # Combine the results
+  
+  NI_c_ratings <- bind_rows(lemma_rating)
+  
+  data |> 
+    mutate(concreteness = NI_c_ratings[match(data$lemma, NI_c_ratings$lemma),]$concreteness,
+           conc_sd = NI_c_ratings[match(data$lemma, NI_c_ratings$lemma),]$dispersion,
+           conc_cv = NI_c_ratings[match(data$lemma, NI_c_ratings$lemma),]$cv) ->> NI_data_concreteness # Add to global environment
   
 }
 
-# Combine the results
-
-NI_c_ratings <- bind_rows(lemma_rating)
-
-NI_data |> 
-  mutate(concreteness = NI_c_ratings[match(NI_data$lemma, NI_c_ratings$lemma),]$concreteness,
-         conc_sd = NI_c_ratings[match(NI_data$lemma, NI_c_ratings$lemma),]$dispersion,
-         conc_cv = NI_c_ratings[match(NI_data$lemma, NI_c_ratings$lemma),]$cv) -> NI_data_concreteness
-
+concreteness_annotation(NI_data)
 
 # Selectional strength ----------------------------------------------------
 
