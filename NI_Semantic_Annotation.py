@@ -16,41 +16,21 @@ from pywsd.similarity import max_similarity as maxsim
 from nltk.corpus import wordnet as wn
 from nltk.tokenize import word_tokenize
 
-# Accessing data from NI_Selectional_Strength in Python environment
-
-#print(python_input_df_py) # Print imported df
-
-#sentence = str(python_input_df_py.iloc[0, 2])
-
-# Works
-
-#verb_dis = disambiguate(sentence, similarity_option='wup', keepLemmas=True)
-
-# This is the result I need
-#verb_sense = maxsim(sentence, 'accepting', pos='v', option='wup')
-
-# Let's do this for all sentences
-
-#input_sentences = python_input_df_py['text_cleaned'].tolist()
-
-
-# input_sentences[2]
-
-
-## WORKS 
-
 # Function to get the best sense for a keyword in a sentence
 def get_best_sense(sentence, keyword):
-    # Tokenize the sentence and convert it to a list of lemmas
-    tokens = nltk.word_tokenize(sentence)
-    
-     # Convert lemmas list back to a string to use as context in maxsim
-    context_sentence = ' '.join(tokens)
-    
-    # Find the best sense of the keyword in the context of the sentence
-    best_sense = maxsim(context_sentence, keyword, pos='v', option='wup')
-    
-    return best_sense
+  try:
+      # Tokenize the sentence and convert it to a list of lemmas
+      tokens = nltk.word_tokenize(sentence)
+      
+      # Convert lemmas list back to a string to use as context in maxsim
+      context_sentence = ' '.join(tokens)
+      
+      # Find the best sense of the keyword in the context of the sentence
+      best_sense = maxsim(context_sentence, keyword, pos='v', option='wup')
+      
+      return best_sense
+  except IndexError:
+      return None
 
 #get_best_sense("I eat food.", "eat")
 

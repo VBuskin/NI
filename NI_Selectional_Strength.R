@@ -5,7 +5,11 @@
 # Load libraries
 
 source("NI_Libraries.R")
-source("NI_Loading")
+source("NI_Loading.R")
+
+
+# Part I: Verb sense disambiguation ---------------------------------------
+
 
 
 # Extract sentences -------------------------------------------------------
@@ -47,30 +51,41 @@ extract_target_sentence <- function(text, target_word) {
   }
 }
 
-# Application to test data
+
+### Application to data ------------------------------------------------
+
 
 test_data <- NI_data_parsed[1:10,] %>% dplyr::select(text, keyword, lemma)
 
+full_data <- NI_data_parsed %>% dplyr::select(text, keyword, lemma)
 
-python_input <- list()
 
 
-for (i in 1:nrow(test_data)) {
-  
-  cleaned_sent <- extract_target_sentence(test_data[i,]$text, test_data[i,]$keyword)
-  
-  input_df <- tibble(
-    lemma = test_data[i,]$lemma,
-    keyword = test_data[i,]$keyword,
-    text_cleaned = cleaned_sent
-  )
-  
-  python_input[[i]] <- input_df
-  
+extract_sentences <- function(df) {
+  # Set empty list environment
+  python_input <- list()
+  # Loop
+  for (i in 1:nrow(df)) {
+    # Use the sentence extraction from above
+    cleaned_sent <- extract_target_sentence(df[i,]$text, df[i,]$keyword)
+    # Create tibble with lemma, keyword and cleaned text
+    input_df <- tibble(
+      lemma = df[i,]$lemma,
+      keyword = df[i,]$keyword,
+      text_cleaned = cleaned_sent
+    )
+    # Store results of each iteration
+    python_input[[i]] <- input_df
+  }
+  # Convert list of results into df
+  python_input_df <- dplyr::bind_rows(python_input)
+  # End
+  return(python_input_df)
 }
 
-python_input_df <- dplyr::bind_rows(python_input)
+python_input_df <- extract_sentences(full_data)
 
+#python_input_df <- dplyr::bind_rows(python_input)
 
 
 # Transfer to Python ------------------------------------------------------
@@ -87,15 +102,14 @@ python_input_df_py <- pd$DataFrame(python_input_df)
 
 # Convert R data frame to Python pandas DataFrame
 
-python_input_df_py <- py$pd$DataFrame(python_input_df)
+#python_input_df_py <- py$pd$DataFrame(python_input_df)
 
 py$python_input_df_py <- python_input_df_py
 
 
 # After this, it should appear in the Python working environment
 
-py$assign("python_input_df_py", python_input_df_py)
-
+#py$assign("python_input_df_py", python_input_df_py)
 
 
 # Read in Python data -----------------------------------------------------
@@ -120,9 +134,13 @@ senses_df$sense <- gsub("^Synset\\('(.*)'\\)$", "\\1", senses_df$sense)
 
 senses_df %>% View()
 
-# Perfect! Just need to do this on a larger scale and I'm good.
+# Save the output
+
+#saveRDS(senses_df, "R_data/senses_df_14_06_24.RDS")
 
 # For the selectional strength, I might need to this for the objects too.
 
+
+# Part II: Identifying objects --------------------------------------------
 
 
