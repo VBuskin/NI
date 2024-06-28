@@ -59,8 +59,6 @@ test_data <- NI_data_parsed[1:10,] %>% dplyr::select(text, keyword, lemma)
 
 full_data <- NI_data_parsed %>% dplyr::select(text, keyword, lemma)
 
-
-
 extract_sentences <- function(df) {
   # Set empty list environment
   python_input <- list()
