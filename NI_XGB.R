@@ -26,8 +26,64 @@ model_data_xgb <- model_data
 
 # Preparation -------------------------------------------------------------
 
-# Optional step
-# model_data_xgb <- model_data_xgb %>% drop_na()
+colnames(iris)
+
+# Turn this into a function
+
+set.seed(123) 
+
+data <- iris
+
+response <- "Species"
+
+data[,response]
+
+
+prep_for_xgb <- function(data, response) {
+  
+  # Define response variable y and convert it to a numeric factor
+  y <- as.numeric(data[, which(names(data) == response)]) - 1
+  
+  # Define feature space X (should not include response!)
+  X <- data[, -which(names(data) == response)]
+  
+  # Define which columns of X should be converted to numeric factors (= all of them)
+  columns_to_convert <- colnames(X)
+  
+  # Loop through each column and convert it
+  for (col in columns_to_convert) {
+    X[[col]] <- as.integer(X[[col]])
+  }
+  
+  # Convert df to matrix
+  X <- as.matrix(X)
+  
+  # Partition data into train and test sets; requires library("caret")
+  index <- createDataPartition(y, times = 1, p = 0.7, list = FALSE)
+  
+  # Training data (output is assigned to global environment)
+  X_train <<- X[index, ]
+  y_train <<- y[index]
+  
+  # Test data (output is assigned to global environment)
+  X_test <<- X[-index, ]
+  y_test <<- y[-index]
+  
+  # Done
+}
+
+# Run the function
+prep_for_xgb(iris, "Species") # Output appears in the working environment
+
+# Fit the XGB model
+xgb_model <- xgboost(data = X_train,
+                     label = y_train,
+                     missing = NA,
+                     nrounds = 20,
+                     objective = "multi:softmax", # Use "binary:logistic" or "binary:logitraw" for binary classification problems
+                     eval_metric = "mlogloss",
+                     num_class = 3, # Delete this if you only have 2 classes
+                     max_depth = 5) # Max number of splits
 
 # Remove response variable from X_train
 X <- subset(model_data_xgb, select = -Object_FE_Realisation)
