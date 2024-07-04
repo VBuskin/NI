@@ -72,15 +72,15 @@ fviz_cluster(list(data=data_for_clustering, cluster=kmeans_result$cluster),
 
 reduce_dim <- function(cluster_data) {
 
-# Perform t-SNE to reduce dimensions to 2
-tsne_result <- Rtsne(cluster_data, dims = 2)
-
-# Create a data frame with the 2D coordinates and lemma names
-df_tsne <- data.frame(tsne_result$Y, Lemma = embedding_df_unique$Lemma)
-
-df_tsne$Cluster <- as.factor(kmeans_result$cluster)
-
-return(df_tsne)
+  # Perform t-SNE to reduce dimensions to 2
+  tsne_result <- Rtsne(cluster_data, dims = 2)
+  
+  # Create a data frame with the 2D coordinates and lemma names
+  df_tsne <- data.frame(tsne_result$Y, Lemma = embedding_df_unique$Lemma)
+  
+  df_tsne$Cluster <- as.factor(kmeans_result$cluster)
+  
+  return(df_tsne)
 
 }
 

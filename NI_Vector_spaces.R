@@ -21,42 +21,42 @@ read_SING()
 
 lemmatise_ICE <- function(corpus) {
 
-Corpus_lemmatised <- tokens_replace(tokens(corpus),
-                                    pattern = lexicon::hash_lemmas$token,
-                                    replacement = lexicon::hash_lemmas$lemma)
-
-# Convert everything to lowercase
-
-Corpus_lemmatised |> tokens_tolower() -> Corpus_lemmatised_low
-
-## Detokenize the corpus and remove superfluous white spaces
-
-Corpus_lemmatised_clean <- lapply(Corpus_lemmatised_low, paste, collapse = " ")
-
-Corpus_lemmatised_clean <- str_squish(Corpus_lemmatised_clean)
-
-
-## Remove corpus annotation (cf. Leuckert 2019: 89)
-
-### 1st layer: Remove extra-corpus text (<X> ... </X>)
-
-Corpus_lemmatised_clean1 <- gsub("<\\s*X[^>]*>(.*?)<\\s*/\\s*X>", "", Corpus_lemmatised_clean)
-
-### 2nd layer: Remove untranscribed text (<O> ... </O>)
-
-Corpus_lemmatised_clean2 <- gsub("<\\s*O[^>]*>(.*?)<\\s*/\\s*O>", "", Corpus_lemmatised_clean1)
-
-### 3rd layer: Remove editorial comments (<&> ... </&>)
-
-Corpus_lemmatised_clean3 <- gsub("<\\s*&[^>]*>(.*?)<\\s*/\\s*&>", "", Corpus_lemmatised_clean2)
-
-### 4th layer: Remove all remaining (in-line) tags (< ... >)
-
-Corpus_lemmatised_clean4 <- gsub("<(.*?)>", "", Corpus_lemmatised_clean3)
-
-### Return the fully-processed corpus object
-
-Corpus_lemmatised_final <<- Corpus_lemmatised_clean4
+  Corpus_lemmatised <- tokens_replace(tokens(corpus),
+                                      pattern = lexicon::hash_lemmas$token,
+                                      replacement = lexicon::hash_lemmas$lemma)
+  
+  # Convert everything to lowercase
+  
+  Corpus_lemmatised |> tokens_tolower() -> Corpus_lemmatised_low
+  
+  ## Detokenize the corpus and remove superfluous white spaces
+  
+  Corpus_lemmatised_clean <- lapply(Corpus_lemmatised_low, paste, collapse = " ")
+  
+  Corpus_lemmatised_clean <- str_squish(Corpus_lemmatised_clean)
+  
+  
+  ## Remove corpus annotation (cf. Leuckert 2019: 89)
+  
+  ### 1st layer: Remove extra-corpus text (<X> ... </X>)
+  
+  Corpus_lemmatised_clean1 <- gsub("<\\s*X[^>]*>(.*?)<\\s*/\\s*X>", "", Corpus_lemmatised_clean)
+  
+  ### 2nd layer: Remove untranscribed text (<O> ... </O>)
+  
+  Corpus_lemmatised_clean2 <- gsub("<\\s*O[^>]*>(.*?)<\\s*/\\s*O>", "", Corpus_lemmatised_clean1)
+  
+  ### 3rd layer: Remove editorial comments (<&> ... </&>)
+  
+  Corpus_lemmatised_clean3 <- gsub("<\\s*&[^>]*>(.*?)<\\s*/\\s*&>", "", Corpus_lemmatised_clean2)
+  
+  ### 4th layer: Remove all remaining (in-line) tags (< ... >)
+  
+  Corpus_lemmatised_clean4 <- gsub("<(.*?)>", "", Corpus_lemmatised_clean3)
+  
+  ### Return the fully-processed corpus object
+  
+  Corpus_lemmatised_final <<- Corpus_lemmatised_clean4
 
 }
 
