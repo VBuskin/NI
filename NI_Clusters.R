@@ -12,10 +12,10 @@ set.seed(123) # For reproducibility
 
 # Run this prior to running the clustering algorithms
 
-remove_duplicates_to_df <- function(similarity_matrix) {
+remove_duplicates_to_df <- function(similarity_matrix, words) {
 
   # Combine embeddings and lemmas into a data frame
-  embedding_df <- data.frame(similarity_matrix, Lemma = unique(NI_data$lemma))
+  embedding_df <- data.frame(similarity_matrix, Lemma = words)
   
   # Remove duplicate rows based on the embeddings
   embedding_df_unique <<- embedding_df[!duplicated(embedding_df[, 1:ncol(similarity_matrix)]), ]

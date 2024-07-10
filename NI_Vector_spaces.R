@@ -134,4 +134,4 @@ vector_space <- function(corpus_object, lemmas) {
 
 GB_sim_mat <- vector_space(ICE_GB_lemmatised, unique(NI_data$lemma))
 
-SING_sim_mat <- vector_space(ICE_SING_lemmatised, unique(NI_data$lemma))
+#SING_sim_mat <- vector_space(ICE_SING_lemmatised, unique(NI_data$lemma))
