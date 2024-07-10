@@ -1,6 +1,6 @@
 
 
-# Compute selectional strength and work with WordNet ----------------------
+# Part I: Word sense disambiguation ----------------------
 
 # Load libraries
 
