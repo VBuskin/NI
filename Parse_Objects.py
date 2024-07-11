@@ -35,11 +35,14 @@ predictor = Predictor.from_path("https://storage.googleapis.com/allennlp-public-
 # so now I have moved to the new one (BERT).
 
 
-# Let's try it without AllenNLP
+# Let's try it without AllenNLP (can't install it for whatever reason)
 
 predictor.predict(
   sentence="Did Uriah honestly think he could beat the game in under three hours?"
 )
+
+
+
 
 
 

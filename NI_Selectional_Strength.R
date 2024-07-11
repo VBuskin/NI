@@ -1,6 +1,6 @@
 
 
-# Part I: Word sense disambiguation ----------------------
+# Part I: NLP stuff ----------------------
 
 # Load libraries
 

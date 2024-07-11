@@ -1,7 +1,5 @@
 
 
-# Part II: Resnik's selectional preference strength -----------------------
-
-
+# Part III: Resnik's selectional preference strength -----------------------
 
 
