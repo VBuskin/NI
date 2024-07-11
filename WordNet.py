@@ -150,13 +150,24 @@ class KeyBasedDefaultDict(dict):
         return new_value
 
 
-# Define parsing function parse_string()
+# Define parsing function parse_string() VERSION 1
 
 def parse_string(string):
     doc = nlp(string)
     for token in doc:
         print(str(token) + "(" + str(token.dep_) + "; " + str(token.pos_) + ")")
     return doc
+  
+# Define parsing function parse_string() VERSION 2
+
+  def parse_string(string):
+    doc = nlp(string)
+    output = []
+    for token in doc:
+        output.append(f"{str(token)}({str(token.dep_)}; {str(token.pos_)})")
+    parsed_string = " ".join(output)  # Join list elements with newline character
+    return parsed_string
+
 
 ## Examples
 
@@ -198,37 +209,37 @@ def get_object(sent, sent_string, verb):
             # make sure the verb is actually in the sentence somewhere, as a verb.
             verb_lemma_in_sentence = True
 
-        exclude = [token.dep_ == u"auxpass", 
+        #exclude = [token.dep_ == u"auxpass", 
                    # a bunch of reasons that we should EXCLUDE the sentence.
-        token.dep_ == "nsubjpass",
-        (token.lemma_ == verb  and (token.dep_ == u"amod"
-                                    or token.dep_ == u"xcomp"
-                                    or token.dep_ == u"acomp"
-                                    or token.dep_ == "nsubj"
-                                    or token.dep_ == "prep"
-                                    or token.dep_ == "dobj"
-                                    or token.dep_ == "conj"
-                                    or token.dep_ == u"oprd"
-                                    or token.dep_ == u"acomp"
-                                    or token.dep_ == u"ccomp"
-                                    or token.dep_ == u"npadvmod"
-                                    or token.dep_ == "advcl"
-                                    or token.dep_ == u"acl"
-                                    or token.dep_ == u"relcl"
-                                    or token.dep_ == u"compound"
-                                    or token.dep_ == u"aux")),
-        token.head.lemma_ == verb and (token.dep_ == u"xcomp"
-                                              or token.pos_ == u"part"
-                                              or token.dep_ == u"prt"
-                                              or token.dep_ == u"conj"
-                                              or token.dep_ == u"prep"
-                                              or token.dep_ == u"agent"
-                                              or token.dep_ == u"advcl"
-                                              or token.dep_ == u"intj"
-                                              or token.dep_ == "ccomp"
-                                              or token.dep_ == u"pcomp")]
-        if True in exclude:
-                eligible = False
+        #token.dep_ == "nsubjpass",
+        #(token.lemma_ == verb  and (token.dep_ == u"amod"
+         #                           or token.dep_ == u"xcomp"
+          #                          or token.dep_ == u"acomp"
+           #                         or token.dep_ == "nsubj"
+            #                        or token.dep_ == "prep"
+             #                       or token.dep_ == "dobj"
+              #                      or token.dep_ == "conj"
+               #                     or token.dep_ == u"oprd"
+                #                    or token.dep_ == u"acomp"
+                 #                   or token.dep_ == u"ccomp"
+                  #                  or token.dep_ == u"npadvmod"
+                   #                 or token.dep_ == "advcl"
+                    #                or token.dep_ == u"acl"
+                     #               or token.dep_ == u"relcl"
+                      #              or token.dep_ == u"compound"
+                       #             or token.dep_ == u"aux")),
+        #token.head.lemma_ == verb and (token.dep_ == u"xcomp"
+         #                                     or token.pos_ == u"part"
+          #                                    or token.dep_ == u"prt"
+           #                                   or token.dep_ == u"conj"
+            #                                  or token.dep_ == u"prep"
+             #                                 or token.dep_ == u"agent"
+              #                                or token.dep_ == u"advcl"
+               #                               or token.dep_ == u"intj"
+                #                              or token.dep_ == "ccomp"
+                 #                             or token.dep_ == u"pcomp")]
+        #if True in exclude:
+         #       eligible = False
     
         if (token.dep_ == u"obj" or token.dep_ == u"dobj") and (str(token.head.lemma_) == verb):
                 # makes sure this token is an OBJECT in the parse
@@ -565,6 +576,21 @@ for verb in verbs_of_interest:
     for c in class_dict.keys():
         total += sel_assn_dict[verb][c]
     print(f"\nFor verb '{verb}', the association total should be 100: {total}")
+
+
+#### Application to my data ####
+
+print(python_input_df_py)
+
+test_parse1 = python_input_df_py.at[0, 'text_cleaned']
+test_parse1_output = parse_string(test_parse1)
+
+test_parse1_output
+
+# Apply parse_string function to each row in 'text_cleaned' column
+python_input_df_py['dep_parsed'] = python_input_df_py['text_cleaned'].apply(parse_string)
+
+python_output_df_py = python_input_df_py
 
 
 

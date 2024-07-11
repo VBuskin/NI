@@ -11,7 +11,6 @@ source("NI_Loading.R")
 # Part I: Verb sense disambiguation ---------------------------------------
 
 
-
 # Extract sentences -------------------------------------------------------
 
 ## Preparation: Merge the columns "pre", "keyword" and "post" into one
@@ -55,7 +54,7 @@ extract_target_sentence <- function(text, target_word) {
 ### Application to data ------------------------------------------------
 
 
-test_data <- NI_data_parsed[1:10,] %>% dplyr::select(text, keyword, lemma)
+test_data <- NI_data_parsed[1:50,] %>% dplyr::select(text, keyword, lemma)
 
 full_data <- NI_data_parsed %>% dplyr::select(text, keyword, lemma)
 
@@ -81,7 +80,7 @@ extract_sentences <- function(df) {
   return(python_input_df)
 }
 
-python_input_df <- extract_sentences(full_data)
+python_input_df <- extract_sentences(test_data)
 
 #python_input_df <- dplyr::bind_rows(python_input)
 
@@ -149,4 +148,78 @@ saveRDS(NI_data_parsed, "R_data/NI_data_sem_parsed_14_06_2024.RDS")
 
 # Part II: Identifying objects --------------------------------------------
 
+dep_df <- py$python_output_df_py
 
+dep_df <- as_tibble(dep_df)
+
+# View
+as_tibble(dep_df) %>% View()
+
+# Identify those rows where there is a 'dobj' relationship
+
+dep_df %>% 
+  dplyr::filter(grepl("dobj", dep_parsed)) %>% 
+  View()
+  
+# The 'dobj' relationship must be found AFTER the keyword to avoid multiple counts
+
+find_dobj_after_verb <- function(df) {
+  df %>%
+    mutate(
+      # Find position of the keyword in dep_parsed
+      keyword_position = map2_chr(keyword, dep_parsed, ~ {
+        keyword_match <- str_locate(.y, .x)
+        if (!is.na(keyword_match[1, "start"])) {
+          return(as.character(keyword_match[1, "start"]))
+        } else {
+          return(NA_character_)
+        }
+      }),
+      
+      # Check if 'dobj' appears after the keyword
+      has_dobj_after_keyword = map2_lgl(keyword_position, dep_parsed, ~ {
+        if (!is.na(.x)) {
+          dobj_match <- str_locate(.y, "dobj")
+          return(!is.na(dobj_match[1, "start"]) && dobj_match[1, "start"] > as.integer(.x))
+        } else {
+          return(FALSE)
+        }
+      })
+    ) %>%
+    filter(has_dobj_after_keyword)
+}
+
+# Apply the function to your dataframe
+subset_df <- find_dobj_after_verb(dep_df)
+
+# Retrieve the word
+
+find_dobj_word <- function(df) {
+  df %>%
+    mutate(
+      dobj_word = map_chr(dep_parsed, ~ {
+        match <- str_match(.x, "\\b(\\w+)\\(dobj;")
+        if (!is.na(match[1, 2])) {
+          return(match[1, 2])
+        } else {
+          return(NA_character_)
+        }
+      })
+    )
+}
+
+matched_df <- find_dobj_word(dep_df) # WORKS
+
+
+
+target <- pull(dep_df[2, 4])
+
+target2 <- pull(dep_df[3, 4])
+
+match <- str_match_all(target, "\\b(\\w+)\\(dobj;")
+
+match2 <- str_match_all(target2, "\\b(\\w+)\\(dobj;")
+
+as.data.frame(match)[1,2] # Goal
+
+as.data.frame(match2)[1,2] # Goal
