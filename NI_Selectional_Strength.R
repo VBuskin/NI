@@ -222,3 +222,15 @@ matched_df_py <- pd$DataFrame(matched_df)
 # Convert R data frame to Python pandas DataFrame
 
 py$matched_df_py <- matched_df_py
+
+
+# Get it back to R
+
+matched_results <- py$matched_df_py
+
+matched_results <- as_tibble(matched_results)
+
+write_xlsx(matched_results, "R_data/parsed_sample.xlsx")
+
+matched_results$noun_class3 # list
+
