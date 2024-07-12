@@ -26,6 +26,9 @@ from pywsd.similarity import max_similarity as maxsim
 from nltk.corpus import wordnet as wn
 from nltk.tokenize import word_tokenize
 
+
+## Test
+
 # Get synsets for the lemma 'eat'
 synsets = wn.synsets('eat', pos=wn.VERB)
 
@@ -591,6 +594,116 @@ test_parse1_output
 python_input_df_py['dep_parsed'] = python_input_df_py['text_cleaned'].apply(parse_string)
 
 python_output_df_py = python_input_df_py
+
+# Get WordNet classes
+
+class_dict = defaultdict(set) # for each class, its words. a set so we don't double-count.
+word_dict = defaultdict(set) # for each word, its classes.  a set so we don't double-count.
+word_freq_dict = defaultdict(int) # for each word (object), its number of occurrences.
+class_freq_dict = defaultdict(float)
+
+# Hpyernym function 1 (Glass 2021)
+
+def get_hypernym_classes(word):
+    # Tokenize and lemmatize using spaCy
+    doc = nlp(word)
+    lemma = doc[0].lemma_
+    
+    # Process word using NLTK WordNet
+    lemmas = wn.lemmas(lemma)
+    for lemma in lemmas:
+        synset = lemma.synset()
+        if ".n" in synset.name():  # only consider NOUN synsets
+            hypers = synset.hypernyms()
+            for hyper in hypers:
+                paths = hyper.hypernym_paths()
+                for path in paths:
+                    for item in path:
+                        item_name = item.name()
+                        class_dict[item_name].add(word)
+                        word_dict[word].add(item_name)
+    return class_dict, word_dict
+
+noun = "pedal"
+
+class_dict, word_dict = get_hypernym_classes(noun)
+
+# Print results
+print("Class Dictionary:")
+for key, value in class_dict.items():
+    print(f"{key}: {value}")
+
+print("\nWord Dictionary:")
+for key, value in word_dict.items():
+    print(f"{key}: {value}")
+    
+    
+# Hypernym function 2
+
+def get_hypernym_classes(word):
+    synsets = wn.synsets(word, pos=wn.NOUN)
+    hypernyms = set()
+    for synset in synsets:
+        if ".n." in synset.name():
+            for hyper in synset.hypernyms():
+                hypernyms.add(hyper.name())
+    return list(hypernyms)
+  
+get_hypernym_classes("brake")
+
+
+# Hypernym function 3
+
+def get_hypernym_classes(word):
+    # Tokenize and lemmatize using spaCy
+    doc = nlp(word)
+    lemma = doc[0].lemma_
+    
+    # Process word using NLTK WordNet
+    hypernyms = set()
+    lemmas = wn.lemmas(lemma)
+    for lemma in lemmas:
+        synset = lemma.synset()
+        if ".n" in synset.name():  # only consider NOUN synsets
+            for hyper in synset.hypernyms():
+                hypernyms.add(hyper.name())
+    return list(hypernyms)
+
+# Get frequency of a class (Sample analysis)
+
+from collections import defaultdict
+
+# Assuming word_freq_dict, class_dict, and word_dict are already populated
+# For example:
+
+word_freq_dict = {'brake': 5, 'pedal': 3, 'car': 10}
+class_dict = {'artifact.n.01': {'brake', 'pedal'}, 'vehicle.n.01': {'car'}}
+word_dict = {'brake': {'artifact.n.01'}, 'pedal': {'artifact.n.01'}, 'car': {'vehicle.n.01'}}
+
+class_freq_dict = defaultdict(float)  # Initialize the class frequency dictionary
+
+print("making class freq dict....")
+for c in class_dict.keys(): 
+    class_freq = 0
+    for word in class_dict[c]:  # For all words that class c has in it
+        class_freq += word_freq_dict[word] / float(len(word_dict[word]))  # word's freq / number of classes that word falls into
+    class_freq_dict[c] = class_freq
+
+# Print the resulting class frequency dictionary
+for c, freq in class_freq_dict.items():
+    print(f"Class: {c}, Frequency: {freq}")
+
+#### Extract dobj nouns from df ####
+
+# Apply the function to each noun in dobj_word and add to df (With function 1, works)
+matched_df_py['noun_class'] = matched_df_py['dobj_word'].apply(lambda noun: get_hypernym_classes(noun) if pd.notna(noun) else [])
+
+print(matched_df_py[['text_cleaned', 'dobj_word', 'noun_class']])
+
+# Do the same with the Lelia's function with more concise assignments
+
+# Apply the function to each noun in dobj_word and add to DataFrame
+matched_df_py['noun_class3'] = matched_df_py['dobj_word'].apply(lambda noun: get_hypernym_classes(noun) if pd.notna(noun) else [])
 
 
 

@@ -211,15 +211,14 @@ find_dobj_word <- function(df) {
 matched_df <- find_dobj_word(dep_df) # WORKS
 
 
+# Next step, get WordNet classes of the objects
 
-target <- pull(dep_df[2, 4])
+# Get the df back to Python
 
-target2 <- pull(dep_df[3, 4])
+matched_df
 
-match <- str_match_all(target, "\\b(\\w+)\\(dobj;")
+matched_df_py <- pd$DataFrame(matched_df)
 
-match2 <- str_match_all(target2, "\\b(\\w+)\\(dobj;")
+# Convert R data frame to Python pandas DataFrame
 
-as.data.frame(match)[1,2] # Goal
-
-as.data.frame(match2)[1,2] # Goal
+py$matched_df_py <- matched_df_py
