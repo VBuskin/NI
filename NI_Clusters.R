@@ -50,7 +50,7 @@ pam_result <- pam(embedding_NI_unique, k = 2) # which is more robust to outliers
 
 # Identify optimal number of clusters
 
-optimal_clusters_k_means_lem <- fviz_nbclust(data_for_clustering, FUNcluster = kmeans, method = "silhouette") + theme_classic() + ggtitle("optimal numbers of clusters - kmeans")
+optimal_clusters_k_means_lem <- fviz_nbclust(data_for_clustering, FUNcluster = kmeans, method = "silhouette") + theme_classic() + ggtitle("optimal numbers of clusters - kmeans") # nolint
 
 # Fit k-means model
 kmeans_result <- kmeans(data_for_clustering, centers = 2) # or

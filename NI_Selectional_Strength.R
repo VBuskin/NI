@@ -80,7 +80,7 @@ extract_sentences <- function(df) {
   return(python_input_df)
 }
 
-python_input_df <- extract_sentences(test_data)
+python_input_df <- extract_sentences(full_data)
 
 #python_input_df <- dplyr::bind_rows(python_input)
 
@@ -94,14 +94,16 @@ py_module_available("pandas")
 
 pd <- import("pandas")
 
-python_input_df_py <- pd$DataFrame(python_input_df)
+py_sem_input <- python_input_df
+
+python_sem_input <- pd$DataFrame(py_sem_input)
 
 
 # Convert R data frame to Python pandas DataFrame
 
 #python_input_df_py <- py$pd$DataFrame(python_input_df)
 
-py$python_input_df_py <- python_input_df_py
+py$python_sem_input <- python_sem_input
 
 
 # After this, it should appear in the Python working environment
@@ -190,9 +192,10 @@ find_dobj_after_verb <- function(df) {
 }
 
 # Apply the function to your dataframe
+
 subset_df <- find_dobj_after_verb(dep_df)
 
-# Retrieve the word
+# Just retrieve the dobj head word (better solution; use this)
 
 find_dobj_word <- function(df) {
   df %>%
@@ -211,11 +214,17 @@ find_dobj_word <- function(df) {
 matched_df <- find_dobj_word(dep_df) # WORKS
 
 
-# Next step, get WordNet classes of the objects
 
-# Get the df back to Python
+# Merge with main df ------------------------------------------------------
 
-matched_df
+NI_data_parsed$dobj <- matched_df$dobj_word
+
+write_xlsx(NI_data_parsed, "R_data/NI_data_sem_dep_parsed.xlsx")
+
+
+## Get WordNet class -------------------------------------------------------
+
+# Get the dependency parsed df back to Python
 
 matched_df_py <- pd$DataFrame(matched_df)
 

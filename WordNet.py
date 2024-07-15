@@ -128,7 +128,7 @@ r("print(R_df)")
 # Save the R workspace with the data
 r.run("save.image('r_workspace.RData')")
 
-#### Get WordNet class of objects ####
+#### Parse objects and get WordNet class ####
 
 import spacy
 import nltk
@@ -586,6 +586,8 @@ for verb in verbs_of_interest:
 
 print(python_input_df_py)
 
+# Perform small-scale dependency parsing
+
 test_parse1 = python_input_df_py.at[0, 'text_cleaned']
 test_parse1_output = parse_string(test_parse1)
 
@@ -594,7 +596,7 @@ test_parse1_output
 # Apply parse_string function to each row in 'text_cleaned' column
 python_input_df_py['dep_parsed'] = python_input_df_py['text_cleaned'].apply(parse_string)
 
-python_output_df_py = python_input_df_py
+python_output_df_py = python_input_df_py # Now return to R and extract the object
 
 # Get WordNet classes
 
@@ -695,6 +697,8 @@ for c, freq in class_freq_dict.items():
     print(f"Class: {c}, Frequency: {freq}")
 
 #### Extract dobj nouns from df ####
+
+print(python_input_df_py)
 
 # Apply the function to each noun in dobj_word and add to df (With function 1, works)
 matched_df_py['noun_class'] = matched_df_py['dobj_word'].apply(lambda noun: get_hypernym_classes(noun) if pd.notna(noun) else [])
