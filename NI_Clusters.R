@@ -5,7 +5,10 @@
 
 source("NI_Vector_spaces.R")
 
-# K-means -----------------------------------------------------------------
+
+# Old approaches ----------------------------------------------------------
+
+## K-means -----------------------------------------------------------------
 
 # Preparation
 set.seed(123) # For reproducibility
@@ -66,7 +69,7 @@ fviz_cluster(list(data=data_for_clustering, cluster=kmeans_result$cluster),
 
 
 
-# Dimensionality reduction ------------------------------------------------
+## Dimensionality reduction ------------------------------------------------
 
 # Requires running remove_duplicates_to_df() and the embedding_df_unique$Lemma object
 
@@ -111,7 +114,7 @@ ggplot(SING_tsne, aes(x = X1, y = X2, color = Cluster, label = Lemma)) +
 
 
 
-# Compare similarity matrices ---------------------------------------------
+## Compare similarity matrices ---------------------------------------------
 
 # Make sure to only consider the common set of lemmas
 common_lemmas <- intersect(GB_tsne$Lemma, SING_tsne$Lemma)
@@ -209,7 +212,7 @@ absolute_diff_df %>%
 
 
 
-# Inspection --------------------------------------------------------------
+## Inspection --------------------------------------------------------------
 
 
 ## Relationship with concreteness?
@@ -285,4 +288,125 @@ clusters_merged %>%
 # Then there's probably also register difference
 
 ## Conclusion: NI verbs form two internal clusters which partially reflect concreteness differences. One group denotes more hands-on actions, whereas the other mainly involves cognitive ones. 
+
+
+
+
+# New approaches ----------------------------------------------------------
+
+## Feature matrix ----------------------------------------------------------
+
+# I want to perform dimensionality reduction/clustering on my data set. There are two options:
+# (a) perform it on the full data set with all variables
+# (b) perform it on lemma data set with lemma-specific variables
+
+
+## Let's start with (a) ----------------------------------------------------
+
+### MCA ---------------------------------------------------------------------
+
+
+
+## Load libraries
+
+library(anacor)
+library(ca)
+library(FactoMineR)
+library(Gifi)
+library(lsa)
+library(NMF)
+library(svs)
+
+## Remove rows with missing values
+
+data <- NI_data_variable
+
+model_data <- data %>%  
+  dplyr::select(Object_FE_Realisation, # Response
+                lemma,
+                Telicity,
+                Object_FE_Animacy,
+                #concreteness,
+                #selec_strength,
+                #Cluster_vec,
+                #Cluster_clara,
+                frame,
+                Object_Definiteness,
+                Text_category) %>% 
+  drop_na() %>% 
+  as_tibble()
+
+## Let's try MCA
+
+# Get dimensions
+
+tmp_NI <- apply(model_data, 2, function(j) length(unique(j)))
+
+ndm_NI <- sum(tmp_NI) - length(tmp_NI)
+
+# Perform MCA
+
+mca_NI <- mjca(model_data, nd = ndm_NI, lambda = "indicator")
+
+summary(mca_NI) # damn, I'd need like 53 dimensions to only account for 50% of the variation in the data 
+
+## Visualise the results
+plot(mca_met, dim = c(1, 2), collabels = "level") # only account for 2.4%, absolutely useless
+
+### SCA --------------------------------------------------------------------
+
+# Load libraries
+
+library(cluster)
+library(dendextend)
+library(lattice)
+library(mixtools)
+library(pvclust)
+library(svs)
+
+# Cross-tabulate frequencies
+
+data_tab <- xtabs(~ ., data = model_data)
+
+# Alternatively ...
+
+tmp1 <- cbind(Freq = 1, model_data)
+
+dat2 <- aggregate(Freq ~ ., data = tmp1, sum)
+
+# Two-way frequency table
+
+## Show omission patterns by lemma
+
+#tab1 <- xtabs(Freq ~ Object_FE_Realisation + Telicity, data = dat2)
+
+data_tab <- xtabs(~ Text_category + lemma, data = model_data)
+
+# Visualise
+
+mosaicplot(data_tab, shade = TRUE)
+
+# Perform SCA
+
+ndm <- min(nrow(data_tab), ncol(data_tab)) - 1
+
+sca2 <- CA(data_tab, ncp = ndm, graph = FALSE)
+
+summary(sca2) # Check dimensions
+
+# Plot SCA (works!)
+
+plot(sca2, axes = c(1, 2))
+
+plot(sca2, axes = c(1, 3))
+
+plot(sca2, axes = c(1, 4))
+
+plot(sca2, axes = c(2, 3))
+
+plot(sca2, axes = c(2, 4))
+
+
+
+
 

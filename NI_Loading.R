@@ -110,30 +110,31 @@ NI_data_selec2 <- NI_data_concreteness %>%
 
 # Clusters ----------------------------------------------------------------
 
+# OUT OF ORDER -- UNDER CONSTRUCTION (24-07-2024)
 
-NI_clusters <- readRDS("../Null Instantiation/Vector_spaces/df_tsne.RDS")
+#NI_clusters <- readRDS("../Null Instantiation/Vector_spaces/df_tsne.RDS")
 
-NI_data_selec3 <- merge(NI_data_selec2, NI_clusters[, c("Lemma", "Cluster")], by.x = "lemma", by.y = "Lemma", all.x = TRUE)
+#NI_data_selec3 <- merge(NI_data_selec2, NI_clusters[, c("Lemma", "Cluster")], by.x = "lemma", by.y = "Lemma", all.x = TRUE)
 
 # Rename the Cluster column
 
-names(NI_data_selec3)[which(names(NI_data_concreteness) == "Cluster")] <- "Cluster_Lemma"
+#names(NI_data_selec3)[which(names(NI_data_concreteness) == "Cluster")] <- "Cluster_Lemma"
 
-NI_data_clustered <- NI_data_selec3
+#NI_data_clustered <- NI_data_selec3
 
 # Get CLARA clusters
 
-clusters_merged <- readRDS("../Null Instantiation/Vector_spaces/clusters_merged.Rds")
+#clusters_merged <- readRDS("../Null Instantiation/Vector_spaces/clusters_merged.Rds")
 
-delete_lines <- c(12, 15, 29, 35, 42, 49, 55, 59, 66, 75, 79, 96, 106, 153, 162)
+#delete_lines <- c(12, 15, 29, 35, 42, 49, 55, 59, 66, 75, 79, 96, 106, 153, 162)
 
 # Run this
 
-clusters_cleaned <- clusters_merged[-delete_lines,]
+#clusters_cleaned <- clusters_merged[-delete_lines,]
 
 # Merge with main df
 
-NI_data_clustered_full <- merge(NI_data_clustered, clusters_cleaned[, c("Lemma", "Cluster", "Cluster_clara")], by.x = "lemma", by.y = "Lemma", all.x = TRUE) %>% dplyr::select(-Cluster.y) %>% rename(Cluster_vec = Cluster.x)
+#NI_data_clustered_full <- merge(NI_data_clustered, clusters_cleaned[, c("Lemma", "Cluster", "Cluster_clara")], by.x = "lemma", by.y = "Lemma", all.x = TRUE) %>% dplyr::select(-Cluster.y) %>% rename(Cluster_vec = Cluster.x)
 
 
 
@@ -141,11 +142,42 @@ NI_data_clustered_full <- merge(NI_data_clustered, clusters_cleaned[, c("Lemma",
 
 # Either use the ones saved or cf. NI_Variable_Lemmas.R for an up-to-date version
 
-variable_lemmas <- readRDS("../Null Instantiation/Vector_spaces/variable_lemmas.RDS")
+#variable_lemmas <- readRDS("../Null Instantiation/Vector_spaces/variable_lemmas.RDS")
 
+# Find out which verbs are variable/invariantin my dataset
+find_variable_lemmas <- function(df) {
+  
+  df %>% 
+    dplyr::group_by(lemma, Object_FE_Realisation) %>% 
+    dplyr::count() %>%
+    # This is important, otherwise I can't access the n = 0 observations
+    dplyr::ungroup() %>%
+    # Make sure all combinations are present in the df
+    tidyr::complete(lemma, Object_FE_Realisation, fill = list(n = 0)) -> Results_c
+  
+  # Get invariant cases
+  Results_c %>% 
+    dplyr::filter(n == 0) -> Results_invariant
+  
+  # Extract invariant lemmas
+  Results_invariant_lemmas <- Results_invariant$lemma
+  
+  # Extract variable lemmas
+  Results_variable_lemmas <- unique(Results_c$lemma[-which(Results_c$lemma %in%  Results_invariant_lemmas)])
+  
+  # End
+  return(Results_variable_lemmas)
+  
+}
 
-NI_data_clustered_full %>% 
-  filter(lemma %in% variable_lemmas) -> NI_data_variable
+# Subset df by variable lemmas
+NI_data %>% 
+  filter(lemma %in% find_variable_lemmas(NI_data)) -> NI_data_variable
+  
+# Subset df by invariable lemmas
+NI_data %>% 
+  filter(lemma %nin% find_variable_lemmas(NI_data)) %>% 
+  as_tibble() -> NI_data_invariable
 
 
 # Factors and reference level ---------------------------------------------

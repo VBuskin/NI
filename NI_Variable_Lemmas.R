@@ -4,16 +4,32 @@ source("NI_Loading.R")
 
 # Find out which verbs are invariant in my dataset
 
-model_data %>% 
- dplyr::group_by(lemma, Object_FE_Realisation) %>% 
-count(Object_FE_Realisation, .drop = FALSE) -> Results_c
+find_variable_lemmas <- function(df) {
 
-Results_c %>% 
- dplyr::filter(n == 0) -> Results_invariant
+  df %>% 
+   dplyr::group_by(lemma, Object_FE_Realisation) %>% 
+   dplyr::count() %>%
+   # This is important, otherwise I can't access the n = 0 observations
+   dplyr::ungroup() %>%
+   # Make sure all combinations are present in the df
+   tidyr::complete(lemma, Object_FE_Realisation, fill = list(n = 0)) -> Results_c
+  
+  # Get invariant cases
+  Results_c %>% 
+   dplyr::filter(n == 0) -> Results_invariant
+  
+  # Extract invariant lemmas
+  Results_invariant_lemmas <- Results_invariant$lemma
+  
+  # Extract variable lemmas
+  Results_variable_lemmas <- unique(Results_c$lemma[-which(Results_c$lemma %in%  Results_invariant_lemmas)])
 
-Results_invariant_lemmas <- Results_invariant$lemma
+  # End
+  return(Results_variable_lemmas)
+  
+}
 
-Results_variable_lemmas <- unique(Results_c$lemma[-which(Results_c$lemma %in% Results_invariant_lemmas)])
+invariant_lemmas <- find_invariant_lemmas(NI_data)
 
 #Remove irrelevant verbs from my main df
 
