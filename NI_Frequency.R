@@ -285,6 +285,8 @@ extract_sentences <- function(df) {
 
 kwic_extracted <- extract_sentences(kwic_comb_parsed)
 
+head(kwic_extracted)
+
 #write_xlsx(kwic_extracted, "R_data/kwic_comb_extracted_25-07-2024.xlsx")
 
 
@@ -397,13 +399,106 @@ lemma_features <- function(df) {
   
 }
 
+lemma_features2 <- function(df) {
+  # Define list to store results
+  verb_feats <- list()
+  
+  # Initialize progress bar with ETA
+  pb <- progress_bar$new(
+    format = "[:bar] :current/:total (:percent) ETA: :eta",
+    total = nrow(df),
+    clear = FALSE,
+    width = 60
+  )
+  
+  # Loop through each row of the data frame
+  for (i in 1:nrow(df)) {
+    # Update progress bar
+    pb$tick()
+    
+    # Extract relevant information
+    text <- df$text_cleaned[i]
+    text_category <- df$Text_category[i]
+    text_file_number <- df$File_number[i]
+    target_word <- df$keyword[i]
+    
+    # Initialize variables with NA in case of failure or empty text
+    lemma <- NA
+    POS <- NA
+    features <- NA
+    sentence <- NA
+    
+    # Check if text is not NA, not empty, and not just whitespace
+    if (!is.na(text) && trimws(text) != "") {
+      # Try annotating the text
+      tryCatch({
+        text_anndf <- udpipe::udpipe_annotate(m_eng, x = text) %>%
+          as.data.frame()
+        
+        # Check if annotation returned any tokens
+        if (nrow(text_anndf) > 0) {
+          first_occurrence_index <- which(text_anndf$token == target_word)[1]
+          
+          if (!is.na(first_occurrence_index)) {
+            lemma <- text_anndf$lemma[first_occurrence_index]
+            POS <- text_anndf$upos[first_occurrence_index]
+            features <- text_anndf$feats[first_occurrence_index]
+            sentence <- text_anndf$sentence[first_occurrence_index]
+          }
+        }
+      }, error = function(e) {
+        warning(paste("Error processing text in row", i, ":", e$message))
+      })
+    }
+    
+    # Store results, even if they're NA
+    lemma_features <- tibble(
+      ID = i,
+      text_category = text_category,
+      text_file_number = text_file_number,
+      lemma = lemma,
+      POS = POS,
+      features = features,
+      sentence = sentence
+    )
+    verb_feats[[i]] <- lemma_features
+  }
+  
+  # Combine the results
+  data_feats_df <- bind_rows(verb_feats)
+  
+  # Return the result
+  return(data_feats_df)
+}
 
-lemma_features_full_df <- lemma_features(kwic_extracted)
+library("progress")
+#library("parallel")
+#library("pbapply")
 
+system.time(lemma_features_full_df <- lemma_features2(kwic_extracted))
+
+#write_xlsx(lemma_features_full_df, "R_data/lemma_features_full_df_25-07-2024.xlsx")
+
+head(lemma_features_full_df, n = 200)
+
+lemma_features_full_df %>% 
+  dplyr::filter(POS == "VERB") -> lemma_pos_full_df
+
+lemma_pos_full_df %>% 
+  count(lemma) %>% 
+  View() # Output looks good
 
 # Next: perform entropy calculations for the sample
 
 norm_entropy2 <- function(df) {
+  
+  # Initialize progress bar with ETA
+  pb <- progress_bar$new(
+    format = "[:bar] :current/:total (:percent) ETA: :eta",
+    total = nrow(df),
+    clear = FALSE,
+    width = 60
+  )
   
   # Requires a "lemma" column and a "Text_category" column
   
@@ -414,6 +509,9 @@ norm_entropy2 <- function(df) {
   df <- NI_data_features
   
   for (i in unique(df$lemma)) {
+    
+    # Update progress bar
+    pb$tick()
     
     # Subset
     lem_sub <- df %>% dplyr::filter(lemma == i)
@@ -459,7 +557,12 @@ norm_entropy2 <- function(df) {
 
 # Test
 
-lemma_disp_output <- norm_entropy2(lemma_features_full_df) 
+system.time(lemma_disp_output <- norm_entropy2(lemma_pos_full_df)) 
+
+# Done
+lemma_disp_output # output doesn't make sense; I'd expect roughly 2000 lines ffs
+
+# Function needs rework
 
 # "Values close to 0 mean that the distribution is very uneven such that most observations are concentrated in very few levels or even just one whereas values close to 1 mean that the distribution is very even/ uniform" (Gries 2021: 96).
 
