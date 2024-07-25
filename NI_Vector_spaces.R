@@ -18,8 +18,9 @@ read_SING()
 
 # Lemmatise corpora -------------------------------------------------------
 
+# Lemmatise and clean corpus
 
-lemmatise_ICE <- function(corpus) {
+lemmatise_clean_ICE <- function(corpus) {
 
   Corpus_lemmatised <- tokens_replace(tokens(corpus),
                                       pattern = lexicon::hash_lemmas$token,
@@ -58,6 +59,30 @@ lemmatise_ICE <- function(corpus) {
   
   Corpus_lemmatised_final <<- Corpus_lemmatised_clean4
 
+}
+
+
+
+# Only lemmatise, do not clean:
+
+lemmatise_ICE <- function(corpus) {
+  
+  Corpus_lemmatised <- tokens_replace(tokens(corpus),
+                                      pattern = lexicon::hash_lemmas$token,
+                                      replacement = lexicon::hash_lemmas$lemma)
+  
+  # Convert everything to lowercase
+  
+  Corpus_lemmatised |> tokens_tolower() -> Corpus_lemmatised_low
+  
+  ## Detokenize the corpus and remove superfluous white spaces
+  
+  Corpus_lemmatised_clean <- lapply(Corpus_lemmatised_low, paste, collapse = " ")
+  
+  Corpus_lemmatised_clean <- str_squish(Corpus_lemmatised_clean)
+  
+  return(Corpus_lemmatised_clean)
+  
 }
 
 
