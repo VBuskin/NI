@@ -488,9 +488,17 @@ lemma_pos_full_df %>%
   count(lemma) %>% 
   View() # Output looks good
 
+i <- "increase"
+
 # Next: perform entropy calculations for the sample
 
-norm_entropy2 <- function(df) {
+compute_dispersion <- function(df) {
+
+  # Requires a "lemma" column and a "Text_category" column
+  
+  # Initialise list
+  
+  dispersion_df <- list()
   
   # Initialize progress bar with ETA
   pb <- progress_bar$new(
@@ -500,13 +508,9 @@ norm_entropy2 <- function(df) {
     width = 60
   )
   
-  # Requires a "lemma" column and a "Text_category" column
+  # Proportions of corpus parts
+  corpus_parts <- c(100/500, 80/500, 70/500, 50/500, 20/500, 30/500, 40/500, 40/500, 20/500, 20/500, 10/500, 20/500)
   
-  # Initialise list
-  
-  dispersion_df <- list()
-  
-  df <- NI_data_features
   
   for (i in unique(df$lemma)) {
     
@@ -516,13 +520,13 @@ norm_entropy2 <- function(df) {
     # Subset
     lem_sub <- df %>% dplyr::filter(lemma == i)
     
-    # Get contingency table
+    # Get frequency in different corpus parts
     lem_tab <- table(lem_sub$text_category)
     
-    # Get frequency
+    # Get frequency in the entire corpus
     lem_freq <- lem_sub %>% count(lemma) %>% pull(n)
     
-    # Get prop table
+    # Get proportions in the corpus
     lem_prop <- prop.table(lem_tab)
     
     # Get non-zero cases
@@ -531,13 +535,21 @@ norm_entropy2 <- function(df) {
     # Make sure Text_category is a factor
     lem_sub$text_category <- as.factor(lem_sub$text_category)
     
-    # Calculate entropy
+    # Match corpus_parts length to the unique categories in lem_tab
+    matching_indices <- match(names(lem_tab), unique(df$text_category))
+    corpus_parts_adj <- corpus_parts[matching_indices]
+    
+    # Calculate DKL
+    DKL <- sum(lem_tab / lem_freq * log2(lem_tab / lem_freq * 1 / corpus_parts_adj))
+    
+    # Calculate H_norm
     h_norm <- -sum(lem_prop * log2(lem_prop)) / log2(length(levels(lem_sub$text_category)))
     
     # Store results in tibble
     output_df <- tibble(lemma = i, 
                         frequency = lem_freq, 
-                        dispersion = h_norm) 
+                        Hnorm = h_norm,
+                        DKL = DKL) 
     
     # Store result of each iteration
     dispersion_df[[i]] <- output_df
@@ -548,7 +560,7 @@ norm_entropy2 <- function(df) {
   dispersion_df_full <- bind_rows(dispersion_df)
   
   # Redefine missing values
-  dispersion_df_full[dispersion_df_full$dispersion == "NaN",]$dispersion <- 0
+  dispersion_df_full[dispersion_df_full$Hnorm == "NaN",]$Hnorm <- 0
   
   # End
   return(dispersion_df_full)
@@ -557,17 +569,344 @@ norm_entropy2 <- function(df) {
 
 # Test
 
-system.time(lemma_disp_output <- norm_entropy2(lemma_pos_full_df)) 
+lemma_disp_output <- norm_entropy2(lemma_pos_full_df)
+
+lemma_disp_output <- compute_dispersion(lemma_pos_full_df)
 
 # Done
-lemma_disp_output # output doesn't make sense; I'd expect roughly 2000 lines ffs
-
-# Function needs rework
+lemma_disp_output
 
 # "Values close to 0 mean that the distribution is very uneven such that most observations are concentrated in very few levels or even just one whereas values close to 1 mean that the distribution is very even/ uniform" (Gries 2021: 96).
 
+# Add variant/invariant column
 
-# Full application --------------------------------------------------------
+lemma_disp_output %>% 
+  dplyr::mutate(variable = ifelse(lemma %in% find_variable_lemmas(NI_data), "variable", "invariant")) -> lemma_disp_output_full
+
+# Add log frequencies
+
+lemma_disp_output_full %>% 
+  mutate(log_frequency = log(frequency)) -> lemma_disp_output_full
+
+# Plot
+
+# Visualisation
+library("plotly")
+
+# Creating a plotly 3D scatter plot
+plot_ly(lemma_disp_output_full, x = ~lemma, y = ~log_frequency, z = ~dispersion, color = ~variable, type = 'scatter3d', mode = 'markers') %>%
+  layout(scene = list(xaxis = list(title = 'Lemma'),
+                      yaxis = list(title = 'Frequency'),
+                      zaxis = list(title = 'Dispersion')))
+
+
+# Default plot
+
+lemma_disp_output_full %>% 
+  ggplot(aes(x = lemma, y = log_frequency, col = variable)) +
+  geom_point() 
+
+
+lemma_disp_output_full %>% 
+  group_by(variable) %>% 
+  summarise(
+    mean = mean(frequency),
+    n = length(variable),
+    sd = sd(frequency),
+    mean_disp = mean(dispersion),
+    sd_disp = sd(dispersion),
+    mean_log = mean(log_frequency),
+    sd_mean_log = sd(log_frequency)
+  ) -> lemma_stats
+
+
+length(lemma_disp_output_full$variable)
+
+
+# Store
+
+saveRDS(lemma_disp_output_full, "R_data/lemma_disp_output_full.RDS")
+
+
+# Negative binomial models (for computing rates)
+
+# t-test
+
+t.test(lemma_disp_output_full$frequency ~ lemma_disp_output_full$variable, var.equal = FALSE) # significant
+
+t.test(lemma_disp_output_full$Hnorm ~ lemma_disp_output_full$variable, var.equal = FALSE) # singificant
+
+t.test(lemma_disp_output_full$DKL ~ lemma_disp_output_full$variable, var.equal = FALSE) # singificant
+
+
+effsize::cohen.d(lemma_disp_output_full$frequency, lemma_disp_output_full$variable) # low eff size
+
+effsize::cohen.d(lemma_disp_output_full$Hnorm, lemma_disp_output_full$variable) # high eff size
+
+effsize::cohen.d(lemma_disp_output_full$DKL, lemma_disp_output_full$variable) # high eff size
+
+
+
+# Model
+
+library("rms")
+
+lemma_disp_output_full$variable <- as.factor(lemma_disp_output_full$variable)
+
+lemma_disp_output_full$variable <- relevel(lemma_disp_output_full$variable, ref = "invariant")
+
+mod1 <- glm(variable ~ frequency + dispersion, data = lemma_disp_output_full, family = "binomial")
+
+mod2.glm <- glm(variable ~ log_frequency + Hnorm, data = lemma_disp_output_full, family = "binomial")
+
+mod2 <- lrm(variable ~ log_frequency + Hnorm, data = lemma_disp_output_full)
+
+mod3.lrm <- lrm(variable ~ log_frequency + Hnorm + DKL + concreteness, data = lemma_disp_output_full)
+
+drop1(mod3.glm, test = "Chisq")
+
+anova_result <- anova(mod3, mod2, test = "Chisq")
+
+# Frequenzeffekt wäre kognitiv plausibel!
+
+library("effects")
+
+plot(Effect("Hnorm", mod = mod2.glm))
+
+plot(Effect("log_frequency", mod = mod2.glm))
+
+
+# Concreteness ------------------------------------------------------------
+
+# Perform concreteness annotation
+
+lemma_disp_output_full
+
+
+concreteness_annotation <- function(data) {
+  
+  c_ratings <- read.table("../Null Instantiation/Concreteness_ratings.csv", sep = "\t", header = TRUE)
+  
+  # Create empty list environment
+  lemma_rating <- list()
+  
+  # Start loop
+  for (i in unique(data$lemma)) {
+    
+    # Extract rating for a lemma i
+    rating <- c_ratings[c_ratings$Word == i,]$Conc.M
+    
+    # Extract sd for a lemma i
+    sd <- c_ratings[c_ratings$Word == i,]$Conc.SD
+    
+    # Add results to a tibble
+    tibble(lemma = i,
+           concreteness = rating,
+           dispersion = sd
+    ) %>% 
+      mutate(cv = sd / rating) -> output_df
+    
+    # Store result of each iteration
+    lemma_rating[[i]] <- output_df
+    
+  }
+  
+  # Combine the results
+  c_ratings <- bind_rows(lemma_rating)
+  
+  # Finalise df
+  data |> 
+    mutate(concreteness = c_ratings[match(data$lemma, c_ratings$lemma),]$concreteness,
+           conc_sd = c_ratings[match(data$lemma, c_ratings$lemma),]$dispersion,
+           conc_cv = c_ratings[match(data$lemma, c_ratings$lemma),]$cv) -> verbs_concreteness_df
+  
+  # End
+  return(verbs_concreteness_df)
+  
+}
+
+lemma_conc_df <- concreteness_annotation(lemma_disp_output_full)
+
+# Remove NAs
+
+lemma_conc_df %>% drop_na() -> lemma_conc_df_clean
+
+# Perform tests
+
+t.test(lemma_conc_df_clean$concreteness ~ lemma_conc_df_clean$variable, var.equal = FALSE) # significant -- concreteness is useful!
+
+effsize::cohen.d(lemma_conc_df_clean$concreteness, lemma_conc_df_clean$variable) # low eff size
+
+
+# Update model
+
+mod3.glm <- glm(variable ~ log_frequency + dispersion + concreteness, data = lemma_conc_df, family = "binomial")
+
+mod3.lrm <- lrm(variable ~ log_frequency + DKL + concreteness, data = lemma_conc_df)
+
+cor(lemma_conc_df$log_frequency, lemma_conc_df$dispersion) # moderate correlation
+
+summary(mod3.glm)
+
+mod3.lrm
+
+
+# DKL ---------------------------------------------------------------------
+
+## Test for a specific lemma
+
+lemma_pos_full_df %>% filter(lemma == "increase")  -> increase_df
+
+# Frequency of an item in the corpus parts
+v <- table(increase_df$lemma, increase_df$text_category)
+
+# Frequency of an item in the corpus
+f <- length(increase_df$lemma)
+
+# Percentages of corpus parts
+s <- c(100/500, 80/500, 70/500, 50/500, 20/500, 30/500, 40/500, 40/500, 20/500, 20/500, 10/500, 20/500)
+
+# Compute DKL
+sum(v/f * log2(v/f * 1/s))
+
+# Low value -> even spread (low divergence from reference distribution)
+# High value -> uneven spread (high divergence from reference distribution)
+
+# Implemented in the computer_dispersion() function
+
+lemma_disp_output <- compute_dispersion(lemma_pos_full_df)
+
+lemma_conc_df
+
+#saveRDS(lemma_conc_df, "R_data/lemma_conc_df.RDS")
+
+
+# Might also consider including polysemy count, collocation strength etc.
+
+# Check out psycholinguistic measures: https://websites.psychology.uwa.edu.au/school/MRCDatabase/uwa_mrc.htm
+
+# Lexical specificity -----------------------------------------------------
+
+
+# MRC ---------------------------------------------------------------------
+
+mrc <- read.csv("R_data/mrc2.csv", sep = "|", header = FALSE)
+
+tibble(mrc)
+
+mrc[5000,]
+
+# Split up to make it interpretable
+
+# Extract the large numeric sequence and additional information from column V1
+mrc_split <- mrc %>%
+  # Extract the large numeric sequence
+  mutate(
+    # Use regex to separate the numeric sequence and the rest
+    V1_cleaned = gsub("(\\d+)(.*)", "\\1", V1),
+    # Extract the rest of the information
+    Rest = gsub("^(\\d+)(.*)", "\\2", V1)
+  ) %>%
+  # Separate the rest into the three additional columns
+  separate(Rest, into = c("POS", "Category", "Lemma"), sep = " ", extra = "merge", fill = "right") %>% 
+  as_tibble()
+
+
+
+# Extract each component based on the fixed-width specifications
+mrc_split$NLET <- substring(mrc[,1], 1, 2)
+mrc_split$NPHON <- substring(mrc[,1], 3, 4)
+mrc_split$NSYL <- substring(mrc[,1], 5, 5)
+mrc_split$K_F_FREQ <- substring(mrc[,1], 6, 10)
+mrc_split$K_F_NCATS <- substring(mrc[,1], 11, 12)
+mrc_split$K_F_NSAMP <- substring(mrc[,1], 13, 15)
+mrc_split$T_L_FREQ <- substring(mrc[,1], 16, 21)
+mrc_split$BROWN_FREQ <- substring(mrc[,1], 22, 25)
+mrc_split$FAM <- substring(mrc[,1], 26, 28)
+mrc_split$CONC <- substring(mrc[,1], 29, 31)
+mrc_split$IMAG <- substring(mrc[,1], 32, 34)
+mrc_split$MEANC <- substring(mrc[,1], 35, 37)
+mrc_split$MEANP <- substring(mrc[,1], 38, 40)
+mrc_split$AOA <- substring(mrc[,1], 41, 43)
+mrc_split$TQ2 <- substring(mrc[,1], 44, 44)
+mrc_split$WTYPE <- substring(mrc[,1], 45, 45)
+mrc_split$PDWTYPE <- substring(mrc[,1], 46, 46)
+mrc_split$ALPHSYL <- substring(mrc[,1], 47, 47)
+mrc_split$STATUS <- substring(mrc[,1], 48, 48)
+mrc_split$VAR <- substring(mrc[,1], 49, 49)
+mrc_split$CAP <- substring(mrc[,1], 50, 50)
+mrc_split$IRREG <- substring(mrc[,1], 51, 51)
+
+# Remove the original first column if no longer needed
+mrc_split <- mrc_split[,-1]
+
+# Remove other superfluous columns
+
+mrc_split <- mrc_split[,-c(1:3)]
+
+# Remove superfluous whitespace in the lemma column
+
+mrc_split$Lemma <- trimws(mrc_split$Lemma)
+
+# Testing
+
+mrc_split %>% select(Lemma) %>% pull()
+
+example[50:100,]
+
+# Function to extract and clean lemma
+extract_lemma <- function(lemma) {
+  # Extract the lemma part after the "&" symbol
+  cleaned_lemma <- str_extract(lemma, "&\\s*[^\\s]+") %>%
+    str_replace("&\\s*", "") %>%
+    tolower() %>%
+    str_trim()
+  return(cleaned_lemma)
+}
+
+# Try with this regex
+
+regex <- "(?<=\\s)\\S.*" # it works; but I have to make sure it doesn't replace the irrelevant ones with NAs
+
+
+
+extract_lemma2 <- function(lemma) {
+  # Remove everything before the last sequence of non-whitespace characters
+  cleaned_lemma <- str_replace(lemma, ".+?\\s+(?=\\S+$)", "") %>%
+    tolower() %>%
+    str_trim()
+  
+  return(cleaned_lemma)
+}
+
+
+# Apply the cleaning function and create a new column # WORKS
+mrc_cleaned <- mrc_split %>%
+  mutate(Cleaned_Lemma = sapply(Lemma, extract_lemma2)) %>% 
+  relocate(Cleaned_Lemma)
+
+
+saveRDS(mrc_cleaned, "R_data/mrc_cleaned.RDS") # screw this df, who encodes their stuff like that???
+
+# Check my verbs
+
+mrc_cleaned %>% 
+  filter(Cleaned_Lemma == "drink") %>% 
+  View()
+
+# Subset according to my verbs (all in the lemma_conc_df)
+
+lemma_conc_df$lemma
+
+mrc_cleaned %>% 
+  dplyr::select(-V1_cleaned, -POS, -Lemma) %>% 
+  filter(Cleaned_Lemma %in% lemma_conc_df$lemma) %>% 
+  filter(Category == "VV") -> mrc_df
+
+hist(as.numeric(mrc_df$NPHON))
+
+# WOW, I now have a massive psycholinguistic database that I can work with
+
 
 
 
