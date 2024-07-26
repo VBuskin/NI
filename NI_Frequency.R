@@ -869,6 +869,7 @@ extract_lemma <- function(lemma) {
 regex <- "(?<=\\s)\\S.*" # it works; but I have to make sure it doesn't replace the irrelevant ones with NAs
 
 
+# Use this one
 
 extract_lemma2 <- function(lemma) {
   # Remove everything before the last sequence of non-whitespace characters
@@ -888,6 +889,8 @@ mrc_cleaned <- mrc_split %>%
 
 saveRDS(mrc_cleaned, "R_data/mrc_cleaned.RDS") # screw this df, who encodes their stuff like that???
 
+mrc_cleaned <- readRDS("R_data/mrc_cleaned.RDS")
+
 # Check my verbs
 
 mrc_cleaned %>% 
@@ -901,13 +904,163 @@ lemma_conc_df$lemma
 mrc_cleaned %>% 
   dplyr::select(-V1_cleaned, -POS, -Lemma) %>% 
   filter(Cleaned_Lemma %in% lemma_conc_df$lemma) %>% 
-  filter(Category == "VV") -> mrc_df
+  filter(Category == "VV") %>% 
+  relocate(Cleaned_Lemma, Category, NLET, NPHON) -> mrc_df
 
 hist(as.numeric(mrc_df$NPHON))
 
 # WOW, I now have a massive psycholinguistic database that I can work with
 
 
+# Convert all relevant columns to integers
+
+# Columns to convert to numeric
+columns_to_convert <- colnames(mrc_df)[3:16]
+
+# Loop through each column and convert to numeric
+for (col in columns_to_convert) {
+  mrc_df[[col]] <- as.double(mrc_df[[col]])
+}
+
+# Combine everything ------------------------------------------------------
+
+NLET <- mrc_df[mrc_df$Cleaned_Lemma == lemma,]$NLET
+
+
+psycholinguistic_annotation <- function(data) {
+  
+  # Source df required (mrc_df)
+  mrc_ratings <- mrc_df
+  
+  # Create empty list environment
+  lemma_rating <- list()
+  
+  # Start loop
+  for (i in unique(data$lemma)) {
+    
+    # Extract ratings for a lemma i
+    NLET <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$NLET
+    NPHON <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$NPHON
+    NSYL <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$NSYL
+    K_F_FREQ <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$K_F_FREQ
+    K_F_NCATS <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$K_F_NCATS
+    K_F_NSAMP <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$K_F_NSAMP
+    T_L_FREQ <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$T_L_FREQ
+    BROWN_FREQ <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$BROWN_FREQ
+    FAM <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$FAM
+    CONC <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$CONC
+    IMAG <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$IMAG
+    MEANC <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$MEANC
+    MEANP <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$MEANP
+    AOA <- mrc_ratings[mrc_ratings$Cleaned_Lemma == i,]$AOA
+    
+    # Add results to a tibble
+    tibble(lemma = i,
+           NLET = NLET,
+           NPHON = NPHON,
+           NSYL = NSYL,
+           K_F_FREQ = K_F_FREQ,
+           K_F_NCATS = K_F_NCATS,
+           K_F_NSAMP = K_F_NSAMP,
+           T_L_FREQ = T_L_FREQ,
+           BROWN_FREQ = BROWN_FREQ,
+           FAM = FAM,
+           CONC = CONC,
+           IMAG = IMAG,
+           MEANC = MEANC,
+           MEANP = MEANP,
+           AOA = AOA,
+    ) -> output_df
+    
+    # Store result of each iteration
+    lemma_rating[[i]] <- output_df
+    
+  }
+  
+  # Combine the results
+  full_ratings <- bind_rows(lemma_rating)
+  
+  # Finalise df
+  data |> 
+    mutate(NLET = full_ratings[match(data$lemma, full_ratings$lemma),]$NLET,
+           NPHON = full_ratings[match(data$lemma, full_ratings$lemma),]$NPHON,
+           NSYL = full_ratings[match(data$lemma, full_ratings$lemma),]$NSYL,
+           K_F_FREQ = full_ratings[match(data$lemma, full_ratings$lemma),]$K_F_FREQ,
+           K_F_NCATS = full_ratings[match(data$lemma, full_ratings$lemma),]$K_F_NCATS,
+           K_F_NSAMP = full_ratings[match(data$lemma, full_ratings$lemma),]$K_F_NSAMP,
+           T_L_FREQ = full_ratings[match(data$lemma, full_ratings$lemma),]$T_L_FREQ,
+           BROWN_FREQ = full_ratings[match(data$lemma, full_ratings$lemma),]$BROWN_FREQ,
+           CONC = full_ratings[match(data$lemma, full_ratings$lemma),]$CONC,
+           FAM = full_ratings[match(data$lemma, full_ratings$lemma),]$FAM,
+           IMAG = full_ratings[match(data$lemma, full_ratings$lemma),]$IMAG,
+           MEANC = full_ratings[match(data$lemma, full_ratings$lemma),]$MEANC,
+           MEANP = full_ratings[match(data$lemma, full_ratings$lemma),]$MEANP,
+           AOA = full_ratings[match(data$lemma, full_ratings$lemma),]$AOA,
+    ) -> full_annotated_df
+  
+  # End
+  return(full_annotated_df)
+  
+}
+
+psy_full_ann_df <- psycholinguistic_annotation(lemma_conc_df) # YES
+
+saveRDS(psy_full_ann_df, "R_data/psy_full_ann_df.RDS")
+
+
+# MODELS ------------------------------------------------------------------
+
+psy_full_ann_df
+
+train_data <- psy_full_ann_df[,-1]
+
+train_data$variable <- as.factor(train_data$variable)
+train_data$variable <- relevel(train_data$variable, ref = "invariant")
+
+mod3.lrm <- lrm(variable ~ ., data = train_data)
+
+train_data_clean <- train_data %>% drop_na()
+
+mod.rf <- randomForest(variable ~ ., data = train_data_clean)
+
+mod.rf2 <- ranger(variable ~ NLET +
+                  NPHON +
+                  NSYL +
+                  log_frequency +
+                  DKL +
+                  Hnorm +
+                  concreteness +
+                  CONC +
+                  FAM +
+                  IMAG +
+                  MEANC + # Meaningfulness ratings
+                  MEANP + # the same but times 100
+                  AOA, # Age of acquisition times 100
+                  data = train_data_clean,
+                  importance = "permutation")
+
+# Insane results
+
+ggplot(
+  enframe(
+    mod.rf2$variable.importance,
+    name = "variable",
+    value = "importance"
+  ),
+  aes(
+    x = reorder(variable, importance),
+    y = importance,
+    fill = importance
+  )
+) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  ylab("Variable Importance") +
+  xlab("") +
+  ggtitle("Permutation Feature Importance") +
+  guides(fill = "none") +
+  scale_fill_gradient(low = "red", high = "blue") +
+  theme_minimal()
 
 
 
