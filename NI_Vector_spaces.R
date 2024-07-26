@@ -63,27 +63,40 @@ lemmatise_clean_ICE <- function(corpus) {
 
 
 
+transcripts_collapsed_GB[1]
+
 # Only lemmatise, do not clean:
 
 lemmatise_ICE <- function(corpus) {
   
+  # Extract docnames
+  docnames <- names(corpus)
+  
+  # Tokenize and lemmatize the corpus
   Corpus_lemmatised <- tokens_replace(tokens(corpus),
                                       pattern = lexicon::hash_lemmas$token,
                                       replacement = lexicon::hash_lemmas$lemma)
   
-  # Convert everything to lowercase
-  
-  Corpus_lemmatised |> tokens_tolower() -> Corpus_lemmatised_low
   
   ## Detokenize the corpus and remove superfluous white spaces
   
-  Corpus_lemmatised_clean <- lapply(Corpus_lemmatised_low, paste, collapse = " ")
+  Corpus_lemmatised_clean <- lapply(Corpus_lemmatised, paste, collapse = " ")
   
   Corpus_lemmatised_clean <- str_squish(Corpus_lemmatised_clean)
   
+  
+  # Assign docnames back to the lemmatized corpus
+  names(Corpus_lemmatised_clean) <- docnames
+  
+  # End
   return(Corpus_lemmatised_clean)
   
 }
+
+
+# Updated lemmatisation function to retain corpus structure
+
+ICE_GB_dirty[3]
 
 
 # Apply function to corpus objects
