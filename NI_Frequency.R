@@ -1021,7 +1021,9 @@ mod3.lrm <- lrm(variable ~ ., data = train_data)
 
 train_data_clean <- train_data %>% drop_na()
 
-mod.rf <- randomForest(variable ~ ., data = train_data_clean)
+mod.rf <- randomForest(variable ~ ., data = psy_data_scores)
+
+varImpPlot(mod.rf)
 
 mod.rf2 <- ranger(variable ~ NLET +
                   NPHON +
@@ -1039,11 +1041,14 @@ mod.rf2 <- ranger(variable ~ NLET +
                   data = train_data_clean,
                   importance = "permutation")
 
+
+mod.rf3 <- ranger(variable ~ ., psy_data_scores, importance = "permutation")
+
 # Insane results
 
 ggplot(
   enframe(
-    mod.rf2$variable.importance,
+    mod.rf3$variable.importance,
     name = "variable",
     value = "importance"
   ),

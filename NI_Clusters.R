@@ -408,5 +408,155 @@ plot(sca2, axes = c(2, 4))
 
 
 
+## (b) ---------------------------------------------------------------------
+
+### PCA ---------------------------------------------------------------------
+
+# Load libraries
+library(corrplot)
+library(lattice)
+library(psych)
+library(GPArotation)
+library(Gifi)
+library(FactoMineR)
+
+# Clean data and remove categorical variables
+psy_data <- readRDS("R_data/psy_full_ann_df.RDS")
+
+psy_data2 <- psy_data[,c(-1, -5)]
+
+psy_data3 <- psy_data2 %>% drop_na()
+
+# Correlation matrix
+cor1 <- cor(psy_data3)
+
+# Correlation plot
+corrplot(cor1, col = topo.colors(200), tl.col = "darkgrey")
+
+# Heatmap
+seq1 <- seq(-1, 1, by = 0.01)
+
+levelplot(cor1, aspect = "fill", col.regions = topo.colors(length(seq1)),
+          at = seq1, scales = list(x = list(rot = 45)),
+          xlab = "", ylab = "")
+
+# PCA
+pca1 <- principal(psy_data3, nfactors = ncol(psy_data3), rotate = "none")
+
+## Scree plot
+barplot(pca1$values, main = "Scree plot", ylab = "Variances", xlab = "PC",
+        names.arg = 1:length(pca1$values))
+abline(h = 1, col = "blue", lty = "dotted") # 6 PCs
+
+## Extract important PCs
+pca2 <- principal(psy_data3, nfactors = 6, rotate = "none") # nfactors
+
+## Get loadings
+print(loadings(pca2))
+
+diagram(pca2, main = NA) # very interesting
+
+plot(pca2, labels = colnames(psy_data3), main = NA) # uninterpretable
+
+## Get scores
+head(pca2$scores, n = 5) # first 5 observations
+
+## Visualise scores
+biplot(pca2, choose = c(1, 2), 
+       main = NA, pch = 20, col = c("darkgrey", "blue"))
+
+biplot(pca2, choose = c(2, 3), 
+       main = NA, pch = 20, col = c("darkgrey", "blue"))
+
+biplot(pca2, choose = c(3, 4), 
+       main = NA, pch = 20, col = c("darkgrey", "blue"))
+
+biplot(pca2, choose = c(4, 5), 
+       main = NA, pch = 20, col = c("darkgrey", "blue"))
+
+biplot(pca2, choose = c(5, 6), 
+       main = NA, pch = 20, col = c("darkgrey", "blue"))
+
+## Transfer scores to main df
+
+pca_scores <- as_tibble(pca2$scores)
+
+psy_data3
+
+psy_data_scores <- cbind(psy_data3, pca2$scores)
+
+# Add lemma and variability
+
+psy_lem_var <- psy_data %>% drop_na() %>% dplyr::select(variable)
+
+psy_data_scores <- cbind(psy_data_scores, psy_lem_var)
+
+# Check model
+
+mod.glm <- glm(variable ~ ., data = psy_data_scores, family = "binomial")
+
+summary(mod.glm)
+
+### EFA ---------------------------------------------------------------------
+
+## Without rotation
+efa1 <- fa(psy_data3, nfactors = 6, rotate = "none", fm = "pa")
+
+summary(efa1)
+
+## Loadings
+plot(efa1, labels = colnames(psy_data3), main = NA)
+
+diagram(efa1, main = NA)
+
+## Plot
+biplot(efa1, choose = c(1, 2), main = NA,
+       pch = 20, col = c("darkgrey", "blue")) # VERY interesting; DKL does its own thing
+
+biplot(efa1, choose = c(2, 3), main = NA,
+       pch = 20, col = c("darkgrey", "blue"))
+
+biplot(efa1, choose = c(2, 4), main = NA,
+       pch = 20, col = c("darkgrey", "blue"))
+
+biplot(efa1, choose = c(5, 6), main = NA,
+       pch = 20, col = c("darkgrey", "blue"))
+
+## With rotation
+efa2 <- fa(psy_data3, nfactors = 6, rotate = "Varimax", fm = "pa")
+
+diagram(efa2, main = NA)
+
+## Get scores (principal axes)
+head(efa2$scores, n = 5)
+
+## Plot scores and loadings
+biplot(efa2, choose = c(1, 2), main = NA,
+       pch = 20, col = c("darkgrey", "blue"))
+
+biplot(efa2, choose = c(2, 3), main = NA,
+       pch = 20, col = c("darkgrey", "blue"))
+
+## Gifi (non-linear PCA) not working, computationally singular
+#pca6 <- princals(as.matrix(psy_data3), ndim = 6, levels = "nominal", degrees = 3)
+
+
+# MDS ---------------------------------------------------------------------
+
+library(smacof)
+library(svs)
+
+dist_psy <- dist(psy_data3, method = "euclidean", diag = TRUE, upper = TRUE)  # Distance matrix
+
+# Standadise
+
+dist_psy_std <- scale(dist_psy)
+
+mds1 <- mds(dist_psy, ndim = 2, type = "ordinal") # crashing
+
+mds1
+plot(mds1, plot.type = "Shepard", main = NA)
+plot(mds1, plot.type = "confplot", plot.dim = c(2, 3), main = NA,
+     xlim = c(-2, 2), ylim = c(-1, 1))
 
 
