@@ -560,3 +560,293 @@ plot(mds1, plot.type = "confplot", plot.dim = c(2, 3), main = NA,
      xlim = c(-2, 2), ylim = c(-1, 1))
 
 
+# SCOPE data --------------------------------------------------------------
+
+# Get updated file from the SCOPE section of NI_Frequency.R
+scope_df_filtered
+
+scope_df_filtered %>%
+  left_join(lemma_conc_df %>% 
+              dplyr::select(lemma, frequency, Hnorm, DKL, log_frequency),
+            by = c("Word" = "lemma")) %>%
+  rename(
+    ICE_frequency = frequency,
+    ICE_Hnorm = Hnorm,
+    ICE_DKL = DKL,
+    ICE_log_frequency = log_frequency
+  ) %>% 
+  relocate(Word, Variability, ICE_frequency, ICE_Hnorm, ICE_DKL, ICE_log_frequency) -> scope_input_df
+
+# I need to merge them here
+
+# Remove categorical variables
+scope_input_df %>% 
+  dplyr::select(-Word, -Variability, -IPA, -Status) -> scope_input
+
+# Convert logical vectors to numeric ones
+convert_to_dbl <- function(df) {
+  # For each column in the data frame ...
+  for (col in colnames(df)) {
+    # ... convert the column to a factor.
+    df[[col]] <- as.numeric(df[[col]])
+  }
+  # Return the modified data frame
+  return(df)
+}
+
+scope_input <- convert_to_dbl(scope_input)
+
+
+# Handle NAs
+## Impute missing values with the mean of each column
+scope_input <- scope_input %>%
+  mutate(across(everything(), ~ {
+    # Replace NaN and infinite values with NA first
+    cleaned_column <- ifelse(is.nan(.), NA, .)
+    cleaned_column <- ifelse(is.infinite(cleaned_column), NA, cleaned_column)
+    
+    # Replace NA with the mean of the column
+    ifelse(is.na(cleaned_column), mean(cleaned_column, na.rm = TRUE), cleaned_column)
+  })) 
+
+# Convert to matrix
+scope_matrix <- as.matrix(scope_input) 
+
+# Standardise
+scope_std <- as.matrix(scale(scope_matrix))
+
+# %%%%%%%%%%%%%%%%%%%%%%%%
+# IMPUTE MEANS: Deal with NAs/NaNs
+# Calculate column means, ignoring NAs and NaNs
+col_means <- colMeans(scope_std, na.rm = TRUE)
+
+# Function to replace NA and NaN with column mean
+replace_na_nan <- function(x, mean_val) {
+  ifelse(is.na(x) | is.nan(x), mean_val, x)
+}
+# Apply the function to each column
+scope_std_clean <- apply(scope_std, 2, replace_na_nan, col_means)
+# %%%%%%%%%%%%%%%%%%%%%%%%
+
+# Final imputation
+library("missMDA")
+
+# Preparation
+## Remove infinite values
+scope_std[is.infinite(scope_std)] <- NA
+
+## Remove all potential all-NA columns
+all_na_cols <- colSums(is.na(scope_std)) == nrow(scope_std)
+scope_std <- scope_std[, !all_na_cols]
+
+## Remove all constant columns
+constant_cols <- apply(scope_std, 2, function(x) var(x, na.rm = TRUE) == 0)
+scope_std <- scope_std[, !constant_cols]
+
+## Check for NaN values
+scope_std[is.nan(scope_std)] <- NA
+
+# Perform EM imputation
+imputed_data <- imputePCA(scope_std, method = "EM")
+
+
+
+#saveRDS(scope_std, "R_data/scope_std.RDS")
+
+## Descriptive overview ------------------------------------------------------
+
+# Correlation matrix
+scope_cor <- cor(scope_std)
+
+# Correlation plot
+corrplot(scope_cor, col = topo.colors(200), tl.col = "darkgrey")
+
+# Heatmap
+seq1 <- seq(-1, 1, by = 0.01)
+
+levelplot(scope_cor, aspect = "fill", col.regions = topo.colors(length(seq1)),
+          at = seq1, scales = list(x = list(rot = 45)),
+          xlab = "", ylab = "")
+
+
+## PCA ---------------------------------------------------------------------
+
+# PCA
+pca1 <- PCA(imputed_data$completeObs, graph = FALSE)
+
+pca2 <- principal(imputed_data$completeObs, nfactors = ncol(as.data.frame(imputed_data$completeObs)), rotate = "none") # 6 for 50%, 30 for 75%
+
+# With principal()
+
+# Redo with fewer dimensions
+pca3 <- principal(imputed_data$completeObs, nfactors = 30, rotate = "none") # 33
+
+## Transfer scores to main df
+pca_scores <- as_tibble(pca3$scores)
+
+pca_scope_df <- cbind(scope_input_df[,1:2], pca_scores) # Final output df; use for further analysis
+
+
+
+## Quick model check
+
+rf1 <- ranger(as.factor(Variability) ~ ., data = pca_scope_df[,-1], importance = "permutation")
+# Note: you might wanna exclude PCs with negative importance values lol
+
+rf2 <- ranger(as.factor(Variability) ~ ., data = efa_pca_scope_df[,-1], importance = "permutation") # interesting; the factors are actually very useful!
+
+rf3 <- ranger(as.factor(Variability) ~ ., data = test1, importance = "permutation")
+
+
+
+ggplot(
+  enframe(
+    rf3$variable.importance,
+    name = "variable",
+    value = "importance"
+  ),
+  aes(
+    x = reorder(variable, importance),
+    y = importance,
+    fill = importance
+  )
+) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  ylab("Variable Importance") +
+  xlab("") +
+  ggtitle("Permutation Feature Importance") +
+  guides(fill = "none") +
+  scale_fill_gradient(low = "red", high = "blue") +
+  theme_minimal()
+
+lrm(Variability ~ . , data = pca_scope_df[,-1]) # R2 = 0.352
+
+
+## EFA ---------------------------------------------------------------------
+
+## On standardised data
+efa1 <- fa(as.data.frame(imputed_data$completeObs), nfactors = 6, rotate = "none", fm = "pa")
+
+efa1 # 4 PAs for 63%, 6 for 70%, 8 for 75%
+
+print(loadings(efa1))
+
+diagram(efa1, main = NA)
+
+efa_var <- fa(as.data.frame(imputed_data$completeObs), nfactors = 6, rotate = "varimax", fm = "pa")
+
+## Visualise
+
+biplot(efa1, choose = c(1, 2), main = NA,
+       pch = 20, col = c("darkgrey", "blue")) # don't see shit
+
+## Get scores
+
+efa_scores <- efa1$scores
+
+efa_scores_rotated <- efa_var$scores
+
+efa_pca_scope_df <- cbind(pca_scope_df, efa_scores) # Final output df; use for further analysis
+
+efa_rot_pca_scope_df <- cbind(pca_scope_df, efa_scores_rotated)
+
+## Quick model check
+
+lrm(Variability ~ . , data = efa_pca_scope_df[,-1]) # R2 = 0.358, very nice, but none of the factors are significant; model R2 is only 0.006 better than the one without factors
+# But they're very important in the random forest model ... I need to assess the predictive performance
+
+lrm(Variability ~ PA1 + PA2 + PA3 + PA4 + PA5 + PA6, data = efa_pca_scope_df[,-1]) 
+
+lrm(Variability ~ . , data = efa_rot_pca_scope_df[,-1]) # rotation doesn't improve the model at all
+
+## Quick correlation check
+
+corrplot(cor(efa_rot_pca_scope_df[,-c(1,2)]), col = topo.colors(200), tl.col = "darkgrey")
+
+## yeah, the 6 PAs are perfectly correlated with the first 6 PCs
+
+## Extreme test
+
+test1 <- as_tibble(as.data.frame(imputed_data$completeObs[,-1]))
+
+test1$Variability <- scope_input_df$Variability
+
+lrm(Variability ~ . , data = test1)
+
+rf3 <- ranger(as.factor(Variability) ~ ., data = test1, importance = "permutation") # very interesting
+
+### Visualisation -----------------------------------------------------------
+
+library(ggplot2)
+library(reshape2)
+
+# Assuming efa2 is your factor analysis result
+loadings_matrix <- efa1$loadings
+loadings_df <- as.data.frame(unclass(loadings_matrix))
+loadings_melted <- melt(loadings_df)
+
+# Factor Loading Heatmap: Create a heatmap of factor loadings. This can give you a good overview of which variables load strongly on which factors.
+ggplot(loadings_melted, aes(x = variable, y = value, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1)) +
+  theme_minimal() +
+  theme(axis.text.y = element_blank())
+
+# Top Loading Variables: For each factor, show only the top N (e.g., 10) variables with the highest absolute loadings.
+
+top_loadings <- function(loadings, n = 10) {
+  apply(loadings, 2, function(x) {
+    sorted <- sort(abs(x), decreasing = TRUE)
+    names(sorted)[1:n]
+  })
+}
+
+top_vars <- top_loadings(loadings_matrix, 15) # actually very helpful
+
+print(top_vars)
+
+# Network Graph: Create a network graph where variables are nodes and edges represent strong factor loadings.
+
+library(igraph)
+
+# Create adjacency matrix
+adj_matrix <- crossprod(loadings_matrix > 0.3)  # Adjust threshold as needed
+diag(adj_matrix) <- 0  # Remove self-connections
+
+# Create graph
+g <- graph_from_adjacency_matrix(adj_matrix, mode = "undirected", weighted = TRUE)
+
+# Plot
+plot(g, vertex.size = 5, vertex.label = NA, edge.width = E(g)$weight)
+
+
+# Parallel Coordinates Plot: This can be useful for seeing patterns across factors for subsets of variables.
+library(GGally)
+
+# Select a subset of variables
+subset_vars <- sample(rownames(loadings_df), 50)  # Random 50 variables
+subset_loadings <- loadings_df[subset_vars, ]
+
+ggparcoord(subset_loadings, columns = 1:ncol(subset_loadings), 
+           scale = "uniminmax", alphaLines = 0.3) +
+  theme_minimal()
+
+# Dimensionality Reduction of Loadings: Apply t-SNE or UMAP to the loadings matrix to create a 2D representation.
+
+library(Rtsne)
+
+tsne_result <- Rtsne(loadings_matrix, perplexity = 30, dims = 2)
+tsne_df <- data.frame(x = tsne_result$Y[,1], y = tsne_result$Y[,2], 
+                      variable = rownames(loadings_matrix))
+
+ggplot(tsne_df, aes(x, y, label = variable)) +
+  geom_text(check_overlap = TRUE, size = 3) +
+  theme_minimal()
+
+# Hierarchical Clustering of Loadings: Group variables based on their loading patterns.
+
+hc <- hclust(dist(loadings_matrix))
+plot(hc, labels = FALSE, main = "Hierarchical Clustering of Variables")
+

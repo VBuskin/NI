@@ -59,7 +59,7 @@ for i, row in python_input_df_py.iterrows():
 senses_df = pd.DataFrame(senses_data)
 
 # Display the DataFrame
-print(senses_df) # holy fuck, this actually worked
+print(senses_df)
 
 # Now convert it back to an R object
 

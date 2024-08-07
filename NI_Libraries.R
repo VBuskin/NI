@@ -30,6 +30,19 @@ library("cluster")
 library("factoextra")
 library("FactoMineR")
 library("Rtsne")
+## Multivariate data analysis
+library("corrplot")
+library("lattice")
+library("psych")
+library("GPArotation")
+library("Gifi")
+library("smacof")
+library("svs")
+library("dendextend")
+library("lattice")
+library("mixtools")
+library("pvclust")
+
 
 ## Neural networks and Python
 library("tensorflow")

@@ -405,14 +405,16 @@ get_actual_object(parse_string("The child threw a ball"), "throw")
 get_actual_object(parse_string("The child threw"), "throw")
 
 
-## Get synsets of nouns
+## Get synsets of nouns (CONTINUE HERE)
 
 class_dict = defaultdict(set) # for each class, its words. a set so we don't double-count.
 word_dict = defaultdict(set) # for each word, its classes.  a set so we don't double-count.
 word_freq_dict = defaultdict(int) # for each word (object), its number of occurrences.
 class_freq_dict = defaultdict(float)
 
-lemma = wn.lemmas("ball")
+lemma = wn.lemmas("food")
+
+# Get hypernyms
 
 synset_1 = lemma[1].synset()
 
@@ -627,7 +629,7 @@ def get_hypernym_classes(word):
                         word_dict[word].add(item_name)
     return class_dict, word_dict
 
-noun = "pedal"
+noun = "drink"
 
 class_dict, word_dict = get_hypernym_classes(noun)
 
@@ -671,6 +673,17 @@ def get_hypernym_classes(word):
             for hyper in synset.hypernyms():
                 hypernyms.add(hyper.name())
     return list(hypernyms)
+  
+  
+# Test; I need to count these for each verb
+
+get_hypernym_classes("food")
+get_hypernym_classes("it")
+get_hypernym_classes("question") # ['marriage_proposal.n.01',
+# 'uncertainty.n.01', 'proposal.n.01', 'sentence.n.01', 'subject.n.01',
+#'questioning.n.01']
+
+
 
 # Get frequency of a class (Sample analysis)
 

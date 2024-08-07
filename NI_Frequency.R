@@ -1,9 +1,10 @@
 
 # Obtaining frequency and related information on (non-)NI verbs -----------
 
+## Macro-level analysis
+
 # Load scripts
 source("NI_Loading.R")
-
 
 # Variable data
 
@@ -1006,6 +1007,69 @@ psycholinguistic_annotation <- function(data) {
 psy_full_ann_df <- psycholinguistic_annotation(lemma_conc_df) # YES
 
 saveRDS(psy_full_ann_df, "R_data/psy_full_ann_df.RDS")
+
+
+
+# Clark & Paivio (2004) Extended ratings ----------------------------------
+
+# Required for reading .db files
+library("foreign")
+
+# Read in my verbs with frequency and dispersion data
+lemma_conc_df <- readRDS("R_data/lemma_conc_df.RDS")
+
+# Read in C&P's (2004) ratings
+## (a) normal
+cp_ratings_a <- read.dbf("/Users/vladimirbuskin/Library/Mobile Documents/com~apple~CloudDocs/PhD/PhD_R/Clark_Paivio_2004_BRMIC/cp2004a.dbf")
+
+## (b) extended
+cp_ratings_b <- read.dbf("/Users/vladimirbuskin/Library/Mobile Documents/com~apple~CloudDocs/PhD/PhD_R/Clark_Paivio_2004_BRMIC/cp2004b.dbf")
+
+## Convert to lower case
+cp_ratings_a$WORD <- tolower(cp_ratings_a$WORD)
+cp_ratings_b$WORD <- tolower(cp_ratings_b$WORD)
+
+NI_verbs <- lemma_conc_df %>% dplyr::select(lemma, variable) %>% dplyr::filter(variable == "variable") %>% pull(lemma)
+
+cp_ratings_a %>%
+  dplyr::filter(WORD %in% lemma_conc_df$lemma) %>% 
+  as_tibble() # 84 hits (all verbs)
+
+cp_ratings_a %>%
+  dplyr::filter(WORD %in% NI_verbs) %>% 
+  as_tibble() # 4 hits (NI verbs)
+
+cp_ratings_b %>%
+  dplyr::filter(WORD %in% lemma_conc_df$lemma) %>% 
+  as_tibble() # 221 hits
+
+cp_ratings_b %>%
+  dplyr::filter(WORD %in% NI_verbs) %>% 
+  as_tibble() # 22 hits (NI verbs)
+
+
+# SCOPE -------------------------------------------------------------------
+
+# Don't run this, takes like 20 minutes
+#scope <- read_xlsx("R_data/SCOPE.xlsx")
+
+# Always load it from here
+scope_df <- readRDS("R_data/SCOPE.RDS")
+
+# Read in my verbs with ICE frequency and dispersion data
+lemma_conc_df <- readRDS("R_data/lemma_conc_df.RDS")
+
+# Isolate NI verbs
+NI_verbs <- lemma_conc_df %>% dplyr::select(lemma, variable) %>% dplyr::filter(variable == "variable") %>% pull(lemma)
+
+# Filter for my verbs
+scope_df %>% 
+  dplyr::filter(Word %in% lemma_conc_df$lemma) %>% 
+  dplyr::mutate(Variability = ifelse(Word %in% find_variable_lemmas(NI_data), "variable", "invariant")) %>% 
+  dplyr::relocate(Word, Variability) -> scope_df_filtered
+
+# For unsupervised learning, continue in NI_Clusters.R/SCOPE data
+
 
 
 # MODELS ------------------------------------------------------------------

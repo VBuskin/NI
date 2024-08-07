@@ -221,8 +221,15 @@ NI_data_parsed$dobj <- matched_df$dobj_word
 
 write_xlsx(NI_data_parsed, "R_data/NI_data_sem_dep_parsed.xlsx")
 
+# This is the input df for determining the noun classes
+matched_df <- read_xlsx("R_data/NI_data_sem_dep_parsed.xlsx")
+
 
 ## Get WordNet class -------------------------------------------------------
+
+py_module_available("pandas")
+
+pd <- import("pandas")
 
 # Get the dependency parsed df back to Python
 
@@ -242,4 +249,6 @@ matched_results <- as_tibble(matched_results)
 write_xlsx(matched_results, "R_data/parsed_sample.xlsx")
 
 matched_results$noun_class3 # list
+
+parsed_sample <- read_xlsx("R_data/parsed_sample.xlsx")
 

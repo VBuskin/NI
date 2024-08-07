@@ -65,6 +65,7 @@ lemmatise_clean_ICE <- function(corpus) {
 
 transcripts_collapsed_GB[1]
 
+
 # Only lemmatise, do not clean:
 
 lemmatise_ICE <- function(corpus) {
